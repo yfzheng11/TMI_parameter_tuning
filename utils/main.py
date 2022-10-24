@@ -145,23 +145,28 @@ def main():
     proj = sub_sys_mat * img
     sino = proj.reshape((ELE_PER_SUBSET, 128))
     plt.imshow(sino)
+    plt.colorbar()
     plt.show()
 
-    # # init the image matrix using all ones
-    # img_mat = np.ones(shape=[128, 128, 128], dtype=np.float32).reshape(-1)
-    # for i_iter in range(MAX_ITER):
-    #     print('ITER {}'.format(i_iter))
-    #     for i_subset in range(NUM_SUBSET):
-    #         img_mat = np.multiply(
-    #             np.divide(img_mat, sys_norm_list[i_subset]),
-    #             sys_mat_list[i_subset].transpose() * (prj_mat_list[i_subset] / (sys_mat_list[i_subset] * img_mat)))
-    #         img_mat[np.isnan(img_mat)] = 0
-    #
-    #     # save snapshot image
-    #     if np.mod(i_iter, 5) == 0:
-    #         store = img_mat
-    #         store[np.isnan(store)] = 0
-    #         store.tofile('OSEM_recon_iter{}.raw'.format(i_iter))
+    # init the image matrix using all ones
+    img_mat = np.ones(shape=[128, 128], dtype=np.float32).reshape(-1)
+    for i_iter in range(MAX_ITER):
+        print('ITER {}'.format(i_iter))
+        for i_subset in range(NUM_SUBSET):
+            img_mat = np.multiply(
+                np.divide(img_mat, sys_norm_list[i_subset]),
+                sys_mat_list[i_subset].transpose() * (proj / (sys_mat_list[i_subset] * img_mat)))
+            img_mat[np.isnan(img_mat)] = 0
+
+    plt.imshow(img_mat.reshape((128, 128)))
+    plt.colorbar()
+
+    plt.show()
+    # save snapshot image
+    # if np.mod(i_iter, 5) == 0:
+    #     store = img_mat
+    #     store[np.isnan(store)] = 0
+    #     store.tofile('OSEM_recon_iter{}.raw'.format(i_iter))
     #
     # # save final results
     # store = img_mat

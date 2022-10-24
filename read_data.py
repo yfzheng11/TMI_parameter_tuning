@@ -19,6 +19,7 @@ Projdata_Train = Projdata_Train.transpose()
 print(Projdata_Train.shape)
 sino = Projdata_Train[:, 0].reshape((180, 192))
 plt.imshow(sino)
+plt.colorbar()
 plt.show()
 
 
@@ -31,4 +32,5 @@ print(TrueImgTrain.shape)
 
 img = TrueImgTrain[:, 5].reshape((128, 128))
 plt.imshow(img)
+plt.colorbar()
 plt.show()

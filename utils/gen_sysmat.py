@@ -136,6 +136,8 @@ def main():
         # save the sub projection for fast reference
         # prj_mat_list.append(prj_mat[subset_inds, :, :].reshape(-1))
 
+    sparse.save_npz('../data/sparse_matrix.npz', sub_sys_mat)
+
     f = h5py.File('../data/TrueImgTrain.mat', 'r')
     TrueImgTrain = f.get('/TrueImgTrain')
     TrueImgTrain = np.array(TrueImgTrain)

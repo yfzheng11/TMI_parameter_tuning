@@ -1,9 +1,11 @@
-import scipy.io
+import scipy
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
 
 # mat_contents = scipy.io.loadmat('TrainData.mat')
+
+sysmat = scipy.sparse.load_npz('data/sparse_matrix.npz')
 
 f = h5py.File('data/TrainData.mat', 'r')
 TrainData = f.get('/TrainData')
@@ -21,7 +23,6 @@ sino = Projdata_Train[:, 0].reshape((180, 192))
 plt.imshow(sino)
 plt.colorbar()
 plt.show()
-
 
 f = h5py.File('data/TrueImgTrain.mat', 'r')
 TrueImgTrain = f.get('/TrueImgTrain')

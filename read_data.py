@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 
 # mat_contents = scipy.io.loadmat('TrainData.mat')
 
-f = h5py.File('./TrainData.mat', 'r')
+f = h5py.File('data/TrainData.mat', 'r')
 TrainData = f.get('/TrainData')
 TrainData = np.array(TrainData)
 
 print(TrainData.shape)
 
-f = h5py.File('./projdata_Train.mat', 'r')
+f = h5py.File('data/projdata_Train.mat', 'r')
 Projdata_Train = f.get('/projdata_Train')
 Projdata_Train = np.array(Projdata_Train)
 Projdata_Train = Projdata_Train.transpose()
@@ -22,13 +22,13 @@ plt.imshow(sino)
 plt.show()
 
 
-f = h5py.File('./TrueImgTrain.mat', 'r')
+f = h5py.File('data/TrueImgTrain.mat', 'r')
 TrueImgTrain = f.get('/TrueImgTrain')
 TrueImgTrain = np.array(TrueImgTrain)
 TrueImgTrain = TrueImgTrain.transpose()
 
 print(TrueImgTrain.shape)
 
-# img = TrueImgTrain[:, 5].reshape((128, 128))
-# plt.imshow(img)
-# plt.show()
+img = TrueImgTrain[:, 5].reshape((128, 128))
+plt.imshow(img)
+plt.show()

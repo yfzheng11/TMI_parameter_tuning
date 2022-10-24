@@ -2,12 +2,13 @@ import numpy as np
 import scipy.sparse as sparse
 from siddon import siddon_sparse_2d
 import os.path
-# import argparse
+import h5py
+import matplotlib.pyplot as plt
 
 
 def construct_system_matrix_single_angle(a, d,
-                                         prj_dims=[128, 128],
-                                         img_dims=[128, 128, 128],
+                                         prj_dims=[1, 128],
+                                         img_dims=[1, 128, 128],
                                          prj_cellsize=[3.125, 4.0625],
                                          img_cellsize=[3.125, 4.0625, 4.0625]):
     """
@@ -91,8 +92,8 @@ MAX_ITER = 20  # number of iterations
 
 def main():
     # load projection matrix
-    path = os.path.join('data', 'proj', 'whole_bone.raw')
-    prj_mat = np.fromfile(path, dtype=np.float32).reshape([60, 128, 128])  # .reshape(-1)
+    # path = os.path.join('data', 'proj', 'whole_bone.raw')
+    # prj_mat = np.fromfile(path, dtype=np.float32).reshape([60, 128, 128])  # .reshape(-1)
 
     geometric_angles = np.arange(0, 2 * np.pi, np.pi / 30)
     geometric_distances = [231, 225, 225, 225, 238, 238, 265, 293, 293, 293, 304, 314, 321, 327, 332,
@@ -120,7 +121,8 @@ def main():
             # construct the system matrix for each angle
             ir, jc, v, size = construct_system_matrix_single_angle(subset_angles[i], subset_distances[i])
             v = v.astype(np.float32)
-            ir += i * 128 * 128
+            # i row should be incremented by nproj
+            ir += i * 1 * 128
             irs.append(ir)
             jcs.append(jc)
             vs.append(v)
@@ -132,28 +134,39 @@ def main():
         # calculate the norm of the system matrix, used for fast computation in iteration
         sys_norm_list.append(np.array(np.sum(sub_sys_mat, axis=0)).reshape(-1))
         # save the sub projection for fast reference
-        prj_mat_list.append(prj_mat[subset_inds, :, :].reshape(-1))
+        # prj_mat_list.append(prj_mat[subset_inds, :, :].reshape(-1))
 
-    # init the image matrix using all ones
-    img_mat = np.ones(shape=[128, 128, 128], dtype=np.float32).reshape(-1)
-    for i_iter in range(MAX_ITER):
-        print('ITER {}'.format(i_iter))
-        for i_subset in range(NUM_SUBSET):
-            img_mat = np.multiply(
-                np.divide(img_mat, sys_norm_list[i_subset]),
-                sys_mat_list[i_subset].transpose() * (prj_mat_list[i_subset] / (sys_mat_list[i_subset] * img_mat)))
-            img_mat[np.isnan(img_mat)] = 0
+    f = h5py.File('../data/TrueImgTrain.mat', 'r')
+    TrueImgTrain = f.get('/TrueImgTrain')
+    TrueImgTrain = np.array(TrueImgTrain)
+    TrueImgTrain = TrueImgTrain.transpose()
+    img = TrueImgTrain[:, 5]
 
-        # save snapshot image
-        if np.mod(i_iter, 5) == 0:
-            store = img_mat
-            store[np.isnan(store)] = 0
-            store.tofile('OSEM_recon_iter{}.raw'.format(i_iter))
+    proj = sub_sys_mat * img
+    sino = proj.reshape((ELE_PER_SUBSET, 128))
+    plt.imshow(sino)
+    plt.show()
 
-    # save final results
-    store = img_mat
-    store[np.isnan(store)] = 0
-    store.tofile('OSEM_recon_final.raw')
+    # # init the image matrix using all ones
+    # img_mat = np.ones(shape=[128, 128, 128], dtype=np.float32).reshape(-1)
+    # for i_iter in range(MAX_ITER):
+    #     print('ITER {}'.format(i_iter))
+    #     for i_subset in range(NUM_SUBSET):
+    #         img_mat = np.multiply(
+    #             np.divide(img_mat, sys_norm_list[i_subset]),
+    #             sys_mat_list[i_subset].transpose() * (prj_mat_list[i_subset] / (sys_mat_list[i_subset] * img_mat)))
+    #         img_mat[np.isnan(img_mat)] = 0
+    #
+    #     # save snapshot image
+    #     if np.mod(i_iter, 5) == 0:
+    #         store = img_mat
+    #         store[np.isnan(store)] = 0
+    #         store.tofile('OSEM_recon_iter{}.raw'.format(i_iter))
+    #
+    # # save final results
+    # store = img_mat
+    # store[np.isnan(store)] = 0
+    # store.tofile('OSEM_recon_final.raw')
 
 
 if __name__ == '__main__':

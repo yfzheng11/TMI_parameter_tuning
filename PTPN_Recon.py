@@ -37,8 +37,8 @@ from typing import List
 INPUT_SIZE = 9
 PATCH_reward = 5
 OUTPUT_SIZE = 5
-NPROJ = 180
-NP = 192
+NPROJ = 60
+NP = 128
 TRAIN_IMG_NUM = 6
 TEST_IMG_NUM = 6
 MAXITER_RECON =30
@@ -287,40 +287,52 @@ def reconTV(pMat,projdata,state, action, para, gamma,GroundTruth,NPixel,INPUT_SI
 
 
 def main():
-
-    f = h5py.File('.../TrainData.mat', 'r')
+    import tables
+    f = h5py.File('data/TrainData.mat', 'r')
     TrainData = f.get('/TrainData')
     TrainData = np.array(TrainData)
 
-    f = h5py.File('.../TestData.mat', 'r')
+    f = h5py.File('data/TestData.mat', 'r')
     TestData = f.get('/TestData')
     TestData  = np.array(TestData)
 
-    f = h5py.File('.../TrueImgTrain.mat', 'r')
+    f = h5py.File('data/TrueImgTrain.mat', 'r')
     TrueImgTrain = f.get('/TrueImgTrain')
     TrueImgTrain  = np.array(TrueImgTrain)
     TrueImgTrain  = TrueImgTrain.transpose()
 
-    f = h5py.File('.../TrueImgTest.mat', 'r')
+    f = h5py.File('data/TrueImgTest.mat', 'r')
     TrueImgTest = f.get('/TrueImgTest')
     TrueImgTest = np.array(TrueImgTest)
     TrueImgTest = TrueImgTest.transpose()
 
-    f = h5py.File('.../pMat.mat', 'r')
-    data = f['pMat']['data']
-    ir = f['pMat']['ir']
-    jc = f['pMat']['jc']
-    pMat = scipy.sparse.csc_matrix((data, ir, jc))
+#     f = h5py.File('.../pMat.mat', 'r')
+#     data = f['pMat']['data']
+#     ir = f['pMat']['ir']
+#     jc = f['pMat']['jc']
+#     pMat = scipy.sparse.csc_matrix((data, ir, jc))
 
-    f = h5py.File('.../projdata_Train.mat','r')
-    Projdata_Train = f.get('/projdata_Train')
-    Projdata_Train = np.array(Projdata_Train)
-    Projdata_Train = Projdata_Train.transpose()
+    pMat = scipy.sparse.load_npz('data/sparse_matrix.npz')
+    
+    f = tables.open_file('data/projdata_Train_new.h5', 'r')
+    Projdata_Train = f.root.projection.read()
+    f.close()
 
-    f = h5py.File('.../PTPN_Recon/projdata_Test.mat', 'r')
-    Projdata_Test = f.get('/projdata_Test')
-    Projdata_Test = np.array(Projdata_Test)
-    Projdata_Test = Projdata_Test.transpose()
+#     f = h5py.File('data/projdata_Train.mat','r')
+#     Projdata_Train = f.get('/projdata_Train')
+#     Projdata_Train = np.array(Projdata_Train)
+#     Projdata_Train = Projdata_Train.transpose()
+
+    f = tables.open_file('data/projdata_Test_new.h5', 'r')
+    Projdata_Test = f.root.projection.read()
+    f.close()
+    
+    assert not np.array_equal(Projdata_Test, Projdata_Train)
+    
+#     f = h5py.File('data/PTPN_Recon/projdata_Test.mat', 'r')
+#     Projdata_Test = f.get('/projdata_Test')
+#     Projdata_Test = np.array(Projdata_Test)
+#     Projdata_Test = Projdata_Test.transpose()
 
     save_session_name = 'Session/PTPN_Recon.ckpt'
     session_load_name = 'Session/PTPN_Recon.ckpt'
@@ -437,17 +449,17 @@ def main():
                                 count_yy += 1
                         next_state, reward, para, gamma, error, fimgIter = reconTV(pMat,projdata_Train, state, action, para, gamma,GroundTruth,NPixel,INPUT_SIZE,itertotal,tol[IMG_IDX])
 
-                        pl.figure('current results')
-                        plt.subplot(131)
-                        plt.imshow(log(np.reshape(para, (NPixel, NPixel), order='F')))
-                        plt.subplot(132)
-                        plt.imshow(
-                            np.reshape(next_state[:, int((INPUT_SIZE * INPUT_SIZE + 1) / 2) - 1], (NPixel, NPixel),
-                                       order='F'))
-                        plt.subplot(133)
-                        plt.imshow(np.reshape(GroundTruth, (NPixel, NPixel), order='F'))
-                        plt.show(block=False)
-                        plt.pause(0.1)
+#                         pl.figure('current results1')
+#                         plt.subplot(131)
+#                         plt.imshow(log(np.reshape(para, (NPixel, NPixel), order='F')))
+#                         plt.subplot(132)
+#                         plt.imshow(
+#                             np.reshape(next_state[:, int((INPUT_SIZE * INPUT_SIZE + 1) / 2) - 1], (NPixel, NPixel),
+#                                        order='F'))
+#                         plt.subplot(133)
+#                         plt.imshow(np.reshape(GroundTruth, (NPixel, NPixel), order='F'))
+#                         plt.show(block=False)
+#                         plt.pause(0.1)
 
                         Para[:, IMG_IDX] = para
 

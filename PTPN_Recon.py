@@ -343,13 +343,13 @@ def main():
     with tf.Session() as sess:
 
         if load_session == 1:
-            state_sel = np.load('.../replay_memory/state_PTPN_Recon.npy')
-            next_state_sel = np.load('.../replay_memory/next_state_PTPN_Recon.npy')
-            action_sel = np.load('.../replay_memory/action_PTPN_Recon.npy')
-            reward_sel = np.load('.../replay_memory/reward_PTPN_Recon.npy')
-            para_sel = np.load('.../replay_memory/para_PTPN_Recon.npy')
-            count_memory = np.load('.../replay_memory/count_memory_PTPN_Recon.npy')
-            indicator = np.load('.../replay_memory/indicator_PTPN_Recon.npy')
+            state_sel = np.load('./replay_memory/state_PTPN_Recon.npy')
+            next_state_sel = np.load('./replay_memory/next_state_PTPN_Recon.npy')
+            action_sel = np.load('./replay_memory/action_PTPN_Recon.npy')
+            reward_sel = np.load('./replay_memory/reward_PTPN_Recon.npy')
+            para_sel = np.load('./replay_memory/para_PTPN_Recon.npy')
+            count_memory = np.load('./replay_memory/count_memory_PTPN_Recon.npy')
+            indicator = np.load('./replay_memory/indicator_PTPN_Recon.npy')
             load_episode = 19
         else:
             state_sel = np.zeros((REPLAY_MEMORY, INPUT_SIZE * INPUT_SIZE))
@@ -545,13 +545,13 @@ def main():
 
                 if save_session == 1 and CHECK % 20 ==0:
                     saver.save(sess, save_session_name, global_step=episode + 1)
-                    np.save('.../replay_memory/state_PTPN_Recon', state_sel)
-                    np.save('.../replay_memory/next_PTPN_Recon', next_state_sel)
-                    np.save('.../replay_memory/action_PTPN_Recon', action_sel)
-                    np.save('.../replay_memory/reward_PTPN_Recon', reward_sel)
-                    np.save('.../replay_memory/para_PTPN_Recon', para_sel)
-                    np.save('.../indicator_PTPN_Recon.npy',indicator)
-                    np.save('.../replay_memory/count_memory_PTPN_Recon.npy',count_memory)
+                    np.save('./replay_memory/state_PTPN_Recon', state_sel)
+                    np.save('./replay_memory/next_PTPN_Recon', next_state_sel)
+                    np.save('./replay_memory/action_PTPN_Recon', action_sel)
+                    np.save('./replay_memory/reward_PTPN_Recon', reward_sel)
+                    np.save('./replay_memory/para_PTPN_Recon', para_sel)
+                    np.save('./indicator_PTPN_Recon.npy',indicator)
+                    np.save('./replay_memory/count_memory_PTPN_Recon.npy',count_memory)
 
         print("--- %s seconds to do training ---" % (time.time() - start_time))
 
@@ -589,16 +589,16 @@ def main():
                 plt.pause(0.2)
 
                 print("Testing Image: {}, Iteration: {}, Mean testing error: {}".format(IMG_IDX, ITER_NUM, error))
-                np.save('.../Test_results'+str(ITER_NUM),
+                np.save('./Test_results'+str(ITER_NUM),
                         state_test[:, int((INPUT_SIZE * INPUT_SIZE + 1) / 2) - 1])
-                np.save('.../Test_para' + str(ITER_NUM),
+                np.save('./Test_para' + str(ITER_NUM),
                         para_test)
                 state_test = next_state_test
                 if error>error_old:
                     break
                 error_old = error
-            np.save('.../Test_results_'+str(IMG_IDX+1), fimg)
-            np.save('.../Para_results_'+str(IMG_IDX+1), para_test)
+            np.save('./Test_results_'+str(IMG_IDX+1), fimg)
+            np.save('./Para_results_'+str(IMG_IDX+1), para_test)
 
 if __name__ == "__main__":
     main()

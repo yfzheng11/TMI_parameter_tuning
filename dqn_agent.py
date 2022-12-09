@@ -1,40 +1,57 @@
 import numpy as np
-import torch.nn as nn
-
+# import torch.nn as nn
+import random
 from infrastructure.dqn_utils import ReplayBuffer, PiecewiseSchedule
 from argmax_policy import ArgMaxPolicy
 from dqn_critic import DQNCritic
+import mmlem_recon as emrecon
 
 
 class DQNAgent(object):
     def __init__(self, agent_params):
         self.agent_params = agent_params
         self.batch_size = agent_params['batch_size']
+        self.sysmat = agent_params['sysmat']
         # import ipdb; ipdb.set_trace()
         # self.last_obs = self.env.reset()
 
         self.num_actions = agent_params['ac_dim']
+        self.num_patches = agent_params['num_patch']
         self.learning_starts = agent_params['learning_starts']
         self.learning_freq = agent_params['learning_freq']
         self.target_update_freq = agent_params['target_update_freq']
 
-        self.replay_buffer_idx = None
-        self.exploration = agent_params['exploration_schedule']
+        # self.replay_buffer_idx = None
+        self.exploration = PiecewiseSchedule([(0, 0.99), (1300, 0.1)], outside_value=0.1)
         self.optimizer_spec = agent_params['optimizer_spec']
 
         self.critic = DQNCritic(agent_params['ob_dim'], agent_params['ac_dim'])
         self.actor = ArgMaxPolicy(self.critic)
 
-        lander = agent_params['env_name'].startswith('LunarLander')
+        # lander = agent_params['env_name'].startswith('LunarLander')
         self.replay_buffer = ReplayBuffer(
-            agent_params['replay_buffer_size'], agent_params['ob_dim'])
+            agent_params['replay_buffer_size'], int(agent_params['ob_dim'] ** 2))
         self.t = 0
         self.num_param_updates = 0
 
-    def add_to_replay_buffer(self, paths):
-        self.replay_buffer.add_rollouts(paths)
+        self._int_to_action = {
+            '0': 1.5,
+            '1': 1.1,
+            '2': 1.0,
+            '3': 0.9,
+            '4': 0.5,
+        }
 
-    def step_env(self):
+    def add_to_replay_buffer(self, state, action, param, reward, next_state, done):
+        self.replay_buffer.store_sample(state, action, param, reward, next_state, done)
+
+    def update_param(self, old_param, actions):
+        param = np.empty([self.num_patches], dtype=np.float32)
+        for i in range(self.num_actions):
+            param[actions == i] = old_param[actions == i] * self._int_to_action[f'{i}']
+        return param
+
+    def step_env(self, obs, proj, old_param):
         """
             Step the env and store the transition
             At the end of this block of code, the simulator should have been
@@ -45,30 +62,35 @@ class DQNAgent(object):
         # store the latest observation ("frame") into the replay buffer
         # HINT: the replay buffer used here is `MemoryOptimizedReplayBuffer`
         # in dqn_utils.py
-        self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
-
-        eps = self.exploration.value(self.t)
+        # self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
         # use epsilon greedy exploration when selecting action
-        perform_random_action = (np.random.random() < eps) or (self.t < self.learning_starts)
-        if perform_random_action:
-            # HINT: take random action (can sample from self.env.action_space)
-            # with probability eps (see np.random.random())
-            # OR if your current step number (see self.t) is less that self.learning_starts
-            action = self.env.action_space.sample()
-        else:
-            # HINT: Your actor will take in multiple previous observations ("frames") in order
-            # to deal with the partial observability of the environment. Get the most recent
-            # `frame_history_len` observations using functionality from the replay buffer,
-            # and then use those observations as input to your actor.
-            obs = self.replay_buffer.encode_recent_observation()
-            action = self.actor.get_action(obs)
+        eps = self.exploration.value(self.t)
+        action = np.empty([self.num_patches], dtype=np.int32)
+
+        idx_lst = []
+        for i in range(self.num_patches):
+            perform_random_action = (np.random.random() < eps) or (self.t < self.learning_starts)
+            if perform_random_action:
+                # HINT: take random action (can sample from self.env.action_space)
+                # with probability eps (see np.random.random())
+                # OR if your current step number (see self.t) is less that self.learning_starts
+                action[i] = random.randint(0, self.num_actions - 1)
+            else:
+                idx_lst.append(i)
+                # HINT: Your actor will take in multiple previous observations ("frames") in order
+                # to deal with the partial observability of the environment. Get the most recent
+                # `frame_history_len` observations using functionality from the replay buffer,
+                # and then use those observations as input to your actor.
+                # obs = self.replay_buffer.encode_recent_observation()
+        action[idx_lst] = self.actor.get_action(obs[idx_lst, :])
+        param = self.update_param(old_param, action)
 
         # take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
         # HINT2: remember the following useful function that you've seen before:
         # obs, reward, done, info = env.step(action)
-        new_obs, reward, done, info = self.env.step(action)
+        new_obs, reward, done, info = emrecon.mlem_tv(action)
         self.last_obs = new_obs
 
         # store the result of taking this action into the replay buffer

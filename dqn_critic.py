@@ -31,6 +31,7 @@ class DQNCritic(object):
 
     def build_network(self, h_size=128):
         return nn.Sequential(
+            nn.Unflatten(1, (1, self.ob_dim, self.ob_dim)),
             nn.CONV2D(1, 32, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),

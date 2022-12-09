@@ -7,12 +7,12 @@ class ArgMaxPolicy(object):
         self.critic = critic
 
     def get_action(self, obs):
-        if len(obs.shape) > 3:
-            observation = obs
-        else:
-            observation = obs[None]
+        # if len(obs.shape) > 3:
+        #     observation = obs
+        # else:
+        #     observation = obs[None]
 
         ## return the action that maxinmizes the Q-value
         # at the current observation as the output
-        action = self.critic.qa_values(observation).argmax(axis=-1)
+        action = self.critic.qa_values(obs).argmax(axis=-1)
         return action.squeeze()

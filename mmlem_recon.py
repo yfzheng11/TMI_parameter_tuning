@@ -147,7 +147,7 @@ def mmlem(pMat,
     return next_state, reward, para, gamma, error, fimg
 
 
-def mlem_tv(sysmat, projdata, state, para, GroundTruth, NPixel, patch_size, patch_rew, itertotal):
+def mlem_tv(sysmat, projdata, state, param, GroundTruth, NPixel, patch_size, patch_rew, itertotal):
     sensitivity = np.array(np.sum(sysmat, axis=0)).reshape(-1)
     img_mat = state[:, int((patch_size * patch_size + 1) / 2) - 1]
     img_old = state[:, int((patch_size * patch_size + 1) / 2) - 1]

@@ -17,6 +17,11 @@ class DQNAgent(object):
 
         self.num_actions = agent_params['ac_dim']
         self.num_patches = agent_params['num_patch']
+        self.num_pixels = agent_params['num_pixel']
+        self.patch_size = agent_params['patch_size']
+        self.patch_rew = agent_params['patch_rew']
+        self.niter = agent_params['niter']
+
         self.learning_starts = agent_params['learning_starts']
         self.learning_freq = agent_params['learning_freq']
         self.target_update_freq = agent_params['target_update_freq']
@@ -51,7 +56,7 @@ class DQNAgent(object):
             param[actions == i] = old_param[actions == i] * self._int_to_action[f'{i}']
         return param
 
-    def step_env(self, obs, proj, old_param):
+    def step_env(self, obs, proj, old_param, ground_truth, done):
         """
             Step the env and store the transition
             At the end of this block of code, the simulator should have been
@@ -90,17 +95,19 @@ class DQNAgent(object):
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
         # HINT2: remember the following useful function that you've seen before:
         # obs, reward, done, info = env.step(action)
-        new_obs, reward, done, info = emrecon.mlem_tv(action)
-        self.last_obs = new_obs
+        next_obs, reward, error, fimg = emrecon.mlem_tv(self.sysmat, proj, obs, param, ground_truth, self.num_pixels,
+                                                        self.patch_size, self.patch_rew, self.niter)
+        # self.last_obs = new_obs
 
         # store the result of taking this action into the replay buffer
         # HINT1: see your replay buffer's `store_effect` function
         # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
-        self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
+        # self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
+        self.replay_buffer.store_sample(obs, action, param, reward, next_obs, done)
 
         # if taking this step resulted in done, reset the env (and the latest observation)
-        if done:
-            self.last_obs = self.env.reset()
+        # if done:
+        #     self.last_obs = self.env.reset()
 
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):

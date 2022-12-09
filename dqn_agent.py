@@ -1,5 +1,4 @@
 import numpy as np
-# import torch.nn as nn
 import random
 from infrastructure.dqn_utils import ReplayBuffer, PiecewiseSchedule
 from argmax_policy import ArgMaxPolicy

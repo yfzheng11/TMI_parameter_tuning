@@ -1,6 +1,95 @@
 import numpy as np
 
 
+class ReconEnv(object):
+    def __init__(self, sysmat, proj_train, proj_test, true_img_train, true_img_test, env_params):
+        self.sysmat = sysmat
+        self.sensitivity = np.array(np.sum(sysmat, axis=0)).reshape(-1)
+        self.NIMG = proj_train.shape[-1]
+        self.NITER = env_params['num_iters']  # 5
+        self.NPixel = env_params['NPixel']  # 128
+        self.patch_obs = env_params['patch_obs']  # 9
+        self.patch_rew = env_params['patch_rew']  # 9
+        # proj data
+        self.proj_train = proj_train
+        self.proj_test = proj_test
+        # ground truth img
+        self.true_img_train = true_img_train
+        self.true_img_test = true_img_test
+        self.obs = np.ones((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
+        self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
+        self.session = 'train'
+
+    def reset(self):
+        self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
+        for i in range(self.NIMG):
+            if self.session == 'train':
+                pass
+            else:
+                pass
+
+    def step_env(self, img_old, projdata, true_img, param):
+        img_mat = img_old
+        # for loop over iterations
+        for i in range(self.NITER):
+            print('iteration: ', i + 1, ' of ', self.NITER)
+            # EM step
+            img_mat = np.multiply(
+                np.divide(img_mat, self.sensitivity),
+                self.sysmat.transpose() * (projdata / (self.sysmat * img_mat)))
+            img_mat[np.isnan(img_mat)] = 0
+
+        # obtain next state
+        fimg = np.reshape(img_mat, (self.NPixel, self.NPixel), order='C')
+        fimgpad = np.zeros((self.NPixel + self.patch_obs - 1, self.NPixel + self.patch_obs - 1))
+        margin = self.patch_obs // 2
+        fimgpad[margin:self.NPixel + margin, margin:self.NPixel + margin] = fimg
+        next_state = np.empty((int(self.NPixel ** 2), int(self.patch_obs ** 2)))
+        count = 0
+        for xx in range(self.NPixel):
+            for yy in range(self.NPixel):
+                temp = fimgpad[xx:xx + self.patch_obs, yy:yy + self.patch_obs]
+                next_state[count, :] = temp.reshape(-1, order='C')
+                count += 1
+
+        # obtain reward
+        dist1img = (img_old - true_img).reshape((self.NPixel, self.NPixel), order='C')
+        dist2img = (img_mat - true_img).reshape((self.NPixel, self.NPixel), order='C')
+        dist1imgLarge = np.zeros((self.NPixel + self.patch_rew - 1, self.NPixel + self.patch_rew - 1))
+        margin = self.patch_rew // 2
+        dist1imgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = np.absolute(dist1img)
+
+        dist2imgLarge = np.zeros((self.NPixel + self.patch_rew - 1, self.NPixel + self.patch_rew - 1))
+        dist2imgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = np.absolute(dist2img)
+
+        GTimgLarge = np.zeros((self.NPixel + self.patch_rew - 1, self.NPixel + self.patch_rew - 1))
+        GTimgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = true_img.reshape(
+            (self.NPixel, self.NPixel), order='C')
+
+        rewardimg = np.empty((self.NPixel, self.NPixel), dtype=np.float32)
+        for i in range(self.NPixel):
+            for j in range(self.NPixel):
+                rewardimg[i, j] = 1 / (
+                        np.sum(dist2imgLarge[i:i + self.patch_rew, j:j + self.patch_rew]) + 0.001) - 1 / (
+                                          np.sum(dist1imgLarge[i:i + self.patch_rew, j:j + self.patch_rew]) + 0.001)
+        reward = rewardimg.reshape(-1, order='C')
+        error = np.sum(np.absolute(dist2img))
+
+        return next_state, reward, error, fimg
+
+    def mlem_tv_recon(self, img_old, projdata):
+        img_mat = img_old
+        # for loop over iterations
+        for i in range(self.NITER):
+            print('iteration: ', i + 1, ' of ', self.NITER)
+            # EM step
+            img_mat = np.multiply(
+                np.divide(img_mat, self.sensitivity),
+                self.sysmat.transpose() * (projdata / (self.sysmat * img_mat)))
+            img_mat[np.isnan(img_mat)] = 0
+        return img_mat
+
+
 def mmlem(pMat,
           projdata, state, action, para, gamma, GroundTruth, NPixel, INPUT_SIZE, itertotal, tol):
     projdata = np.reshape(projdata, (param.NPROJ * param.NP, 1), order='F')

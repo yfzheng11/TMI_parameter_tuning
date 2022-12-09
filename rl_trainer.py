@@ -56,7 +56,7 @@ class RL_Trainer(object):
         self.total_envsteps = 0
         self.start_time = time.time()
 
-        print_period = 1000 if isinstance(self.agent, DQNAgent) else 1
+        print_period = 10 if isinstance(self.agent, DQNAgent) else 1
 
         for itr in range(n_iter):
             if itr % print_period == 0:
@@ -73,7 +73,7 @@ class RL_Trainer(object):
             # collect trajectories, to be used for training
             if isinstance(self.agent, DQNAgent):
                 # only perform an env step and add to replay buffer for DQN
-                self.agent.step_env()
+                self.agent.step_env(obs, proj, old_param, ground_truth, done)
                 envsteps_this_batch = 1
                 train_video_paths = None
                 paths = None

@@ -61,8 +61,13 @@ TRAIN_NUM_ITER=10
 def replay_train(mainDQN: dqn_cnn_iteration_till_end.DQN, targetDQN: dqn_cnn_iteration_till_end.DQN, states, next_states, actions, rewards,done,para) -> float:
     X = states
     X1 = next_states
+    
+    pred = targetDQN.predict(X1)
 
-    temp = np.max(targetDQN.predict(X1), axis=3)
+    #temp = np.max(targetDQN.predict(X1), axis=3)
+    temp = np.log(np.sum(np.exp(pred), axis=3))
+    # print(temp.shape)
+    
     Q_target = rewards + DISCOUNT_RATE * temp[:,0,0]
 
     y = mainDQN.predict(X)
@@ -207,7 +212,7 @@ def reconTV(pMat,projdata,state, action, para, gamma,GroundTruth,NPixel,INPUT_SI
         if np.sum(np.absolute(f-fold))/np.sum(np.absolute(fold))<=tol:
 
             break
-    print(IterOut)
+    # print(IterOut)
     fimg = np.reshape(f, (NPixel, NPixel), order='F')
     fimgpad = zeros((NPixel+INPUT_SIZE-1,NPixel+INPUT_SIZE-1))
     fimgpad[int((INPUT_SIZE+1)/2)-1:NPixel+int((INPUT_SIZE+1)/2)-1,int((INPUT_SIZE+1)/2)-1:NPixel+int((INPUT_SIZE+1)/2)-1]=fimg
@@ -577,7 +582,7 @@ def main():
                 action1 = np.argmax(targetDQN.predict(X), axis=3)
                 action2 = np.argmax(mainDQN.predict(X), axis=3)
                 action = action2[:, 0, 0]
-                print(np.mean(action))
+                # print(np.mean(action))
                 gamma = zeros((PATCH_NUM, 2))
                 next_state_test, reward, para_test, gamma, error,fimg = reconTV(pMat, projdata_Test, X, action, para_test, gamma, GroundTruth, NPixel,INPUT_SIZE,itertotal,tol)
                 pl.figure('current results')

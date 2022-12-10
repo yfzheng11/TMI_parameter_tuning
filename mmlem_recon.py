@@ -22,35 +22,18 @@ class ReconEnv(object):
 
     def reset(self):
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
+        self.obs = np.ones((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
         for i in range(self.NIMG):
+            img_old = self.obs[:, int(self.patch_obs ** 2) // 2, i]
             if self.session == 'train':
-                pass
+                img_new = self.mlem_tv_recon(img_old, self.proj_train[:, i], self.param[:, i])
             else:
-                pass
+                img_new = self.mlem_tv_recon(img_old, self.proj_test[:, i], self.param[:, i])
+            self.obs[:, :, i] = self.generate_patch_obs(img_new)
 
     def step_env(self, img_old, projdata, true_img, param):
-        img_mat = img_old
-        # for loop over iterations
-        for i in range(self.NITER):
-            print('iteration: ', i + 1, ' of ', self.NITER)
-            # EM step
-            img_mat = np.multiply(
-                np.divide(img_mat, self.sensitivity),
-                self.sysmat.transpose() * (projdata / (self.sysmat * img_mat)))
-            img_mat[np.isnan(img_mat)] = 0
-
-        # obtain next state
-        fimg = np.reshape(img_mat, (self.NPixel, self.NPixel), order='C')
-        fimgpad = np.zeros((self.NPixel + self.patch_obs - 1, self.NPixel + self.patch_obs - 1))
-        margin = self.patch_obs // 2
-        fimgpad[margin:self.NPixel + margin, margin:self.NPixel + margin] = fimg
-        next_state = np.empty((int(self.NPixel ** 2), int(self.patch_obs ** 2)))
-        count = 0
-        for xx in range(self.NPixel):
-            for yy in range(self.NPixel):
-                temp = fimgpad[xx:xx + self.patch_obs, yy:yy + self.patch_obs]
-                next_state[count, :] = temp.reshape(-1, order='C')
-                count += 1
+        img_mat = self.mlem_tv_recon(img_old, projdata, param)
+        next_state = self.generate_patch_obs(img_mat)
 
         # obtain reward
         dist1img = (img_old - true_img).reshape((self.NPixel, self.NPixel), order='C')
@@ -75,19 +58,35 @@ class ReconEnv(object):
         reward = rewardimg.reshape(-1, order='C')
         error = np.sum(np.absolute(dist2img))
 
-        return next_state, reward, error, fimg
+        return next_state, reward, error, img_mat.reshape((self.NPixel, self.NPixel), order='C')
 
-    def mlem_tv_recon(self, img_old, projdata):
+    def mlem_tv_recon(self, img_old, projdata, param):
         img_mat = img_old
         # for loop over iterations
         for i in range(self.NITER):
-            print('iteration: ', i + 1, ' of ', self.NITER)
+            if i % 10 == 0:
+                print('iteration: ', i + 1, ' of ', self.NITER)
             # EM step
             img_mat = np.multiply(
                 np.divide(img_mat, self.sensitivity),
                 self.sysmat.transpose() * (projdata / (self.sysmat * img_mat)))
             img_mat[np.isnan(img_mat)] = 0
         return img_mat
+
+    def generate_patch_obs(self, img):
+        # obtain next state
+        img = np.reshape(img, (self.NPixel, self.NPixel), order='C')
+        fimgpad = np.zeros((self.NPixel + self.patch_obs - 1, self.NPixel + self.patch_obs - 1))
+        margin = self.patch_obs // 2
+        fimgpad[margin:self.NPixel + margin, margin:self.NPixel + margin] = img
+        next_state = np.empty((int(self.NPixel ** 2), int(self.patch_obs ** 2)))
+        count = 0
+        for xx in range(self.NPixel):
+            for yy in range(self.NPixel):
+                temp = fimgpad[xx:xx + self.patch_obs, yy:yy + self.patch_obs]
+                next_state[count, :] = temp.reshape(-1, order='C')
+                count += 1
+        return next_state
 
 
 def mmlem(pMat,

@@ -13,7 +13,9 @@ Notes:
 
 """
 import numpy as np
-import tensorflow as tf
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import random
 from collections import deque
 import dqn_cnn_iteration_till_end
@@ -37,8 +39,8 @@ from typing import List
 INPUT_SIZE = 9
 PATCH_reward = 5
 OUTPUT_SIZE = 5
-NPROJ = 180
-NP = 192
+NPROJ = 60
+NP = 128
 TRAIN_IMG_NUM = 6
 TEST_IMG_NUM = 6
 MAXITER_RECON =30
@@ -59,8 +61,13 @@ TRAIN_NUM_ITER=10
 def replay_train(mainDQN: dqn_cnn_iteration_till_end.DQN, targetDQN: dqn_cnn_iteration_till_end.DQN, states, next_states, actions, rewards,done,para) -> float:
     X = states
     X1 = next_states
+    
+    pred = targetDQN.predict(X1)
 
-    temp = np.max(targetDQN.predict(X1), axis=3)
+    #temp = np.max(targetDQN.predict(X1), axis=3)
+    temp = np.log(np.sum(np.exp(pred), axis=3))
+    # print(temp.shape)
+    
     Q_target = rewards + DISCOUNT_RATE * temp[:,0,0]
 
     y = mainDQN.predict(X)
@@ -205,7 +212,7 @@ def reconTV(pMat,projdata,state, action, para, gamma,GroundTruth,NPixel,INPUT_SI
         if np.sum(np.absolute(f-fold))/np.sum(np.absolute(fold))<=tol:
 
             break
-    print(IterOut)
+    # print(IterOut)
     fimg = np.reshape(f, (NPixel, NPixel), order='F')
     fimgpad = zeros((NPixel+INPUT_SIZE-1,NPixel+INPUT_SIZE-1))
     fimgpad[int((INPUT_SIZE+1)/2)-1:NPixel+int((INPUT_SIZE+1)/2)-1,int((INPUT_SIZE+1)/2)-1:NPixel+int((INPUT_SIZE+1)/2)-1]=fimg
@@ -287,40 +294,52 @@ def reconTV(pMat,projdata,state, action, para, gamma,GroundTruth,NPixel,INPUT_SI
 
 
 def main():
-
-    f = h5py.File('.../TrainData.mat', 'r')
+    import tables
+    f = h5py.File('data/TrainData.mat', 'r')
     TrainData = f.get('/TrainData')
     TrainData = np.array(TrainData)
 
-    f = h5py.File('.../TestData.mat', 'r')
+    f = h5py.File('data/TestData.mat', 'r')
     TestData = f.get('/TestData')
     TestData  = np.array(TestData)
 
-    f = h5py.File('.../TrueImgTrain.mat', 'r')
+    f = h5py.File('data/TrueImgTrain.mat', 'r')
     TrueImgTrain = f.get('/TrueImgTrain')
     TrueImgTrain  = np.array(TrueImgTrain)
     TrueImgTrain  = TrueImgTrain.transpose()
 
-    f = h5py.File('.../TrueImgTest.mat', 'r')
+    f = h5py.File('data/TrueImgTest.mat', 'r')
     TrueImgTest = f.get('/TrueImgTest')
     TrueImgTest = np.array(TrueImgTest)
     TrueImgTest = TrueImgTest.transpose()
 
-    f = h5py.File('.../pMat.mat', 'r')
-    data = f['pMat']['data']
-    ir = f['pMat']['ir']
-    jc = f['pMat']['jc']
-    pMat = scipy.sparse.csc_matrix((data, ir, jc))
+#     f = h5py.File('.../pMat.mat', 'r')
+#     data = f['pMat']['data']
+#     ir = f['pMat']['ir']
+#     jc = f['pMat']['jc']
+#     pMat = scipy.sparse.csc_matrix((data, ir, jc))
 
-    f = h5py.File('.../projdata_Train.mat','r')
-    Projdata_Train = f.get('/projdata_Train')
-    Projdata_Train = np.array(Projdata_Train)
-    Projdata_Train = Projdata_Train.transpose()
+    pMat = scipy.sparse.load_npz('data/sparse_matrix.npz')
+    
+    f = tables.open_file('data/projdata_Train_new.h5', 'r')
+    Projdata_Train = f.root.projection.read()
+    f.close()
 
-    f = h5py.File('.../PTPN_Recon/projdata_Test.mat', 'r')
-    Projdata_Test = f.get('/projdata_Test')
-    Projdata_Test = np.array(Projdata_Test)
-    Projdata_Test = Projdata_Test.transpose()
+#     f = h5py.File('data/projdata_Train.mat','r')
+#     Projdata_Train = f.get('/projdata_Train')
+#     Projdata_Train = np.array(Projdata_Train)
+#     Projdata_Train = Projdata_Train.transpose()
+
+    f = tables.open_file('data/projdata_Test_new.h5', 'r')
+    Projdata_Test = f.root.projection.read()
+    f.close()
+    
+    assert not np.array_equal(Projdata_Test, Projdata_Train)
+    
+#     f = h5py.File('data/PTPN_Recon/projdata_Test.mat', 'r')
+#     Projdata_Test = f.get('/projdata_Test')
+#     Projdata_Test = np.array(Projdata_Test)
+#     Projdata_Test = Projdata_Test.transpose()
 
     save_session_name = 'Session/PTPN_Recon.ckpt'
     session_load_name = 'Session/PTPN_Recon.ckpt'
@@ -329,13 +348,13 @@ def main():
     with tf.Session() as sess:
 
         if load_session == 1:
-            state_sel = np.load('.../replay_memory/state_PTPN_Recon.npy')
-            next_state_sel = np.load('.../replay_memory/next_state_PTPN_Recon.npy')
-            action_sel = np.load('.../replay_memory/action_PTPN_Recon.npy')
-            reward_sel = np.load('.../replay_memory/reward_PTPN_Recon.npy')
-            para_sel = np.load('.../replay_memory/para_PTPN_Recon.npy')
-            count_memory = np.load('.../replay_memory/count_memory_PTPN_Recon.npy')
-            indicator = np.load('.../replay_memory/indicator_PTPN_Recon.npy')
+            state_sel = np.load('./replay_memory/state_PTPN_Recon.npy')
+            next_state_sel = np.load('./replay_memory/next_state_PTPN_Recon.npy')
+            action_sel = np.load('./replay_memory/action_PTPN_Recon.npy')
+            reward_sel = np.load('./replay_memory/reward_PTPN_Recon.npy')
+            para_sel = np.load('./replay_memory/para_PTPN_Recon.npy')
+            count_memory = np.load('./replay_memory/count_memory_PTPN_Recon.npy')
+            indicator = np.load('./replay_memory/indicator_PTPN_Recon.npy')
             load_episode = 19
         else:
             state_sel = np.zeros((REPLAY_MEMORY, INPUT_SIZE * INPUT_SIZE))
@@ -437,17 +456,17 @@ def main():
                                 count_yy += 1
                         next_state, reward, para, gamma, error, fimgIter = reconTV(pMat,projdata_Train, state, action, para, gamma,GroundTruth,NPixel,INPUT_SIZE,itertotal,tol[IMG_IDX])
 
-                        pl.figure('current results')
-                        plt.subplot(131)
-                        plt.imshow(log(np.reshape(para, (NPixel, NPixel), order='F')))
-                        plt.subplot(132)
-                        plt.imshow(
-                            np.reshape(next_state[:, int((INPUT_SIZE * INPUT_SIZE + 1) / 2) - 1], (NPixel, NPixel),
-                                       order='F'))
-                        plt.subplot(133)
-                        plt.imshow(np.reshape(GroundTruth, (NPixel, NPixel), order='F'))
-                        plt.show(block=False)
-                        plt.pause(0.1)
+#                         pl.figure('current results1')
+#                         plt.subplot(131)
+#                         plt.imshow(log(np.reshape(para, (NPixel, NPixel), order='F')))
+#                         plt.subplot(132)
+#                         plt.imshow(
+#                             np.reshape(next_state[:, int((INPUT_SIZE * INPUT_SIZE + 1) / 2) - 1], (NPixel, NPixel),
+#                                        order='F'))
+#                         plt.subplot(133)
+#                         plt.imshow(np.reshape(GroundTruth, (NPixel, NPixel), order='F'))
+#                         plt.show(block=False)
+#                         plt.pause(0.1)
 
                         Para[:, IMG_IDX] = para
 
@@ -531,13 +550,13 @@ def main():
 
                 if save_session == 1 and CHECK % 20 ==0:
                     saver.save(sess, save_session_name, global_step=episode + 1)
-                    np.save('.../replay_memory/state_PTPN_Recon', state_sel)
-                    np.save('.../replay_memory/next_PTPN_Recon', next_state_sel)
-                    np.save('.../replay_memory/action_PTPN_Recon', action_sel)
-                    np.save('.../replay_memory/reward_PTPN_Recon', reward_sel)
-                    np.save('.../replay_memory/para_PTPN_Recon', para_sel)
-                    np.save('.../indicator_PTPN_Recon.npy',indicator)
-                    np.save('.../replay_memory/count_memory_PTPN_Recon.npy',count_memory)
+                    np.save('./replay_memory/state_PTPN_Recon', state_sel)
+                    np.save('./replay_memory/next_PTPN_Recon', next_state_sel)
+                    np.save('./replay_memory/action_PTPN_Recon', action_sel)
+                    np.save('./replay_memory/reward_PTPN_Recon', reward_sel)
+                    np.save('./replay_memory/para_PTPN_Recon', para_sel)
+                    np.save('./indicator_PTPN_Recon.npy',indicator)
+                    np.save('./replay_memory/count_memory_PTPN_Recon.npy',count_memory)
 
         print("--- %s seconds to do training ---" % (time.time() - start_time))
 
@@ -563,7 +582,7 @@ def main():
                 action1 = np.argmax(targetDQN.predict(X), axis=3)
                 action2 = np.argmax(mainDQN.predict(X), axis=3)
                 action = action2[:, 0, 0]
-                print(np.mean(action))
+                # print(np.mean(action))
                 gamma = zeros((PATCH_NUM, 2))
                 next_state_test, reward, para_test, gamma, error,fimg = reconTV(pMat, projdata_Test, X, action, para_test, gamma, GroundTruth, NPixel,INPUT_SIZE,itertotal,tol)
                 pl.figure('current results')
@@ -575,16 +594,16 @@ def main():
                 plt.pause(0.2)
 
                 print("Testing Image: {}, Iteration: {}, Mean testing error: {}".format(IMG_IDX, ITER_NUM, error))
-                np.save('.../Test_results'+str(ITER_NUM),
+                np.save('./Test_results'+str(ITER_NUM),
                         state_test[:, int((INPUT_SIZE * INPUT_SIZE + 1) / 2) - 1])
-                np.save('.../Test_para' + str(ITER_NUM),
+                np.save('./Test_para' + str(ITER_NUM),
                         para_test)
                 state_test = next_state_test
                 if error>error_old:
                     break
                 error_old = error
-            np.save('.../Test_results_'+str(IMG_IDX+1), fimg)
-            np.save('.../Para_results_'+str(IMG_IDX+1), para_test)
+            np.save('./Test_results_'+str(IMG_IDX+1), fimg)
+            np.save('./Para_results_'+str(IMG_IDX+1), para_test)
 
 if __name__ == "__main__":
     main()

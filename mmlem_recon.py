@@ -25,6 +25,7 @@ class ReconEnv(object):
         self.obs = np.ones((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
         self.session = 'train'
+        self.episode_reward = []
 
     def reset(self):
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
@@ -61,6 +62,7 @@ class ReconEnv(object):
             rewards[:, i] = rew
             error.append(err)
         self.obs = next_state
+        self.episode_reward.append(np.mean(np.sum(rewards, axis=0)))
         return next_state, self.param, rewards, np.mean(error), img_mat
 
     def update_recon_param(self, actions):
@@ -94,12 +96,15 @@ class ReconEnv(object):
         error = np.sum(np.absolute(dist2img))
         return reward, error
 
+    def get_episode_rewards(self):
+        return self.episode_reward
+
     def mlem_tv_recon(self, img_old, projdata, param):
         img_mat = img_old
         # for loop over iterations
         for i in range(self.NITER):
-            if i % 10 == 0:
-                print('iteration: ', i + 1, ' of ', self.NITER)
+            # if i % 10 == 0:
+            #     print('iteration: ', i + 1, ' of ', self.NITER)
             # EM step
             img_mat = np.multiply(
                 np.divide(img_mat, self.sensitivity),
@@ -121,7 +126,6 @@ class ReconEnv(object):
                 next_state[count, :] = temp.reshape(-1, order='C')
                 count += 1
         return next_state
-
 
 # def mmlem(pMat,
 #           projdata, state, action, para, gamma, GroundTruth, NPixel, INPUT_SIZE, itertotal, tol):

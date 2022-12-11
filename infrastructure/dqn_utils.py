@@ -437,7 +437,7 @@ class ReplayBuffer(object):
         Parameters
         ----------
         state: np.array
-            Array of shape (1, img_h * img_w * img_c) and dtype np.uint8
+            Array of shape (n, img_h * img_w, img_c) and dtype np.uint8
             the frame to be stored
         next_state: np.array,
             Array of shape (1, img_h * img_w * img_c) and dtype np.uint8
@@ -451,12 +451,17 @@ class ReplayBuffer(object):
         done: bool
             True if episode was finished after performing that action.
         """
-        self.obs[self.next_idx, :] = state[:]
-        self.next_obs[self.next_idx, :] = next_state[:]
-        self.action[self.next_idx] = action
-        self.param[self.next_idx] = param
-        self.reward[self.next_idx] = reward
-        self.done[self.next_idx] = done
-        # update next idx and total samples in the buffer
-        self.next_idx = (self.next_idx + 1) % self.size
-        self.num_in_buffer = min(self.size, self.num_in_buffer + 1)
+        num = len(action)
+        if num + self.next_idx - 1 <= self.size:
+            self.obs[self.next_idx:num + self.next_idx, :] = state
+            self.next_obs[self.next_idx:num + self.next_idx, :] = next_state
+            self.action[self.next_idx:num + self.next_idx] = action
+            self.param[self.next_idx:num + self.next_idx] = param
+            self.reward[self.next_idx:num + self.next_idx] = reward
+            self.done[self.next_idx:num + self.next_idx] = done
+            # update next idx and total samples in the buffer
+            self.next_idx = (self.next_idx + num) % self.size
+            self.num_in_buffer = min(self.size, self.num_in_buffer + num)
+        else:
+            part1 = self.size - self.next_idx + 2
+            part2 = num - self.size + self.next_idx - 1

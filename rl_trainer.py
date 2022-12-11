@@ -24,7 +24,7 @@ MAX_VIDEO_LEN = 40  # we overwrite this in the code below
 
 class RL_Trainer(object):
 
-    def __init__(self, agent, ob_dim, ac_dim, params):
+    def __init__(self, agent, params):
         #############
         ## INIT
         #############
@@ -45,7 +45,7 @@ class RL_Trainer(object):
         #############
         self.agent = agent
 
-    def run_training_loop(self, n_iter, collect_policy, initial_expertdata=None):
+    def run_training_loop(self, n_iter, collect_policy=None, initial_expertdata=None):
         """
         :param n_iter:  number of (dagger) iterations
         :param collect_policy:
@@ -73,10 +73,7 @@ class RL_Trainer(object):
             # collect trajectories, to be used for training
             if isinstance(self.agent, DQNAgent):
                 # only perform an env step and add to replay buffer for DQN
-                self.agent.step_env(obs, proj, old_param, ground_truth, done)
-                envsteps_this_batch = 1
-                train_video_paths = None
-                paths = None
+                self.agent.env.reset()
             else:
                 use_batchsize = self.params['batch_size']
                 if itr == 0:
@@ -86,10 +83,8 @@ class RL_Trainer(object):
                         itr, initial_expertdata, collect_policy, use_batchsize)
                 )
 
-            self.total_envsteps += envsteps_this_batch
-
             # add collected data to replay buffer
-            self.agent.add_to_replay_buffer(paths)
+            # self.agent.add_to_replay_buffer(paths)
 
             # train agent (using sampled data from replay buffer)
             if itr % print_period == 0:
@@ -139,6 +134,10 @@ class RL_Trainer(object):
         print('\nTraining agent using sampled data from replay buffer...')
         all_logs = []
         for train_step in range(self.params['num_agent_train_steps_per_iter']):
+            # step env
+            self.agent.step_env()
+            self.total_envsteps += 1
+
             # sample some data from the data buffer
             # HINT1: use the agent's sample function
             # HINT2: how much data = self.params['train_batch_size']

@@ -2,14 +2,6 @@ import numpy as np
 import h5py
 import tables
 import param
-
-# import tensorflow as tf
-import random
-from collections import deque
-# import dqn_cnn_iteration_till_end
-
-import time
-import math as m
 import scipy.io
 from numpy import *
 import scipy.linalg
@@ -17,6 +9,8 @@ import matplotlib.pyplot as plt
 import os
 import pylab as pl
 from mmlem_recon import ReconEnv
+from dqn_agent import DQNAgent
+from rl_trainer import RL_Trainer
 
 
 def main():
@@ -53,18 +47,15 @@ def main():
     f.close()
 
     env = ReconEnv(sysmat, proj_train, proj_test, TrueImgTrain, TrueImgTest, param.params)
-    env.reset()
+    agent = DQNAgent(env, param.params)
+    trainer = RL_Trainer(agent, param.params)
+    trainer.run_training_loop(param.params['num_epoches'])
 
-    test = env.obs
-
-    img = test[:, 40, 1]
-    plt.imshow(np.rot90(img.reshape((128, 128)), 3))
-    plt.colorbar()
-    plt.show()
-
-    # save_session_name = 'Session/PTPN_Recon.ckpt'
-    # session_load_name = 'Session/PTPN_Recon.ckpt'
-    # start_time = time.time()
+    # test = env.obs
+    # img = test[:, 40, 1]
+    # plt.imshow(np.rot90(img.reshape((128, 128)), 3))
+    # plt.colorbar()
+    # plt.show()
 
 
 if __name__ == "__main__":

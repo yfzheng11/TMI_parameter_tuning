@@ -7,20 +7,21 @@ import mmlem_recon as emrecon
 
 
 class DQNAgent(object):
-    def __init__(self, agent_params):
-        self.agent_params = agent_params
+    def __init__(self, env, agent_params):
+        # self.agent_params = agent_params
+        self.env = env
         self.batch_size = agent_params['batch_size']
-        self.sysmat = agent_params['sysmat']
-        # import ipdb; ipdb.set_trace()
-        # self.last_obs = self.env.reset()
 
         self.num_actions = agent_params['ac_dim']
-        self.num_patches = agent_params['num_patch']
+        self.num_patch_obs = int(agent_params['NPixel'] ** 2)
+
+        #####
         self.num_pixels = agent_params['num_pixel']
         self.patch_size = agent_params['patch_size']
         self.patch_rew = agent_params['patch_rew']
         self.niter = agent_params['niter']
 
+        ###
         self.learning_starts = agent_params['learning_starts']
         self.learning_freq = agent_params['learning_freq']
         self.target_update_freq = agent_params['target_update_freq']
@@ -38,24 +39,37 @@ class DQNAgent(object):
         self.t = 0
         self.num_param_updates = 0
 
-        self._int_to_action = {
-            '0': 1.5,
-            '1': 1.1,
-            '2': 1.0,
-            '3': 0.9,
-            '4': 0.5,
-        }
+        self.action_repr = agent_params['action_repr']
 
     def add_to_replay_buffer(self, state, action, param, reward, next_state, done):
         self.replay_buffer.store_sample(state, action, param, reward, next_state, done)
 
-    def update_param(self, old_param, actions):
-        param = np.empty([self.num_patches], dtype=np.float32)
-        for i in range(self.num_actions):
-            param[actions == i] = old_param[actions == i] * self._int_to_action[f'{i}']
-        return param
+    def select_action(self):
+        # use epsilon greedy exploration when selecting action
+        eps = self.exploration.value(self.t)
+        action = np.empty([self.num_patch_obs, self.env.NIMG], dtype=np.int32)
 
-    def step_env(self, obs, proj, old_param, ground_truth, done):
+        for j in range(self.env.NIMG):
+            # select action for each img in the env
+            idx_lst = []
+            for i in range(self.num_patch_obs):
+                perform_random_action = (np.random.random() < eps) or (self.t < self.learning_starts)
+                if perform_random_action:
+                    # HINT: take random action (can sample from self.env.action_space)
+                    # with probability eps (see np.random.random())
+                    # OR if your current step number (see self.t) is less that self.learning_starts
+                    action[i, j] = random.randint(0, self.num_actions - 1)
+                else:
+                    idx_lst.append(i)
+                    # HINT: Your actor will take in multiple previous observations ("frames") in order
+                    # to deal with the partial observability of the environment. Get the most recent
+                    # `frame_history_len` observations using functionality from the replay buffer,
+                    # and then use those observations as input to your actor.
+                    # obs = self.replay_buffer.encode_recent_observation()
+            action[idx_lst, j] = self.actor.get_action(self.env.obs[idx_lst, :])
+        return action
+
+    def step_env(self, done):
         """
             Step the env and store the transition
             At the end of this block of code, the simulator should have been
@@ -69,40 +83,20 @@ class DQNAgent(object):
         # self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
         # use epsilon greedy exploration when selecting action
-        eps = self.exploration.value(self.t)
-        action = np.empty([self.num_patches], dtype=np.int32)
-
-        idx_lst = []
-        for i in range(self.num_patches):
-            perform_random_action = (np.random.random() < eps) or (self.t < self.learning_starts)
-            if perform_random_action:
-                # HINT: take random action (can sample from self.env.action_space)
-                # with probability eps (see np.random.random())
-                # OR if your current step number (see self.t) is less that self.learning_starts
-                action[i] = random.randint(0, self.num_actions - 1)
-            else:
-                idx_lst.append(i)
-                # HINT: Your actor will take in multiple previous observations ("frames") in order
-                # to deal with the partial observability of the environment. Get the most recent
-                # `frame_history_len` observations using functionality from the replay buffer,
-                # and then use those observations as input to your actor.
-                # obs = self.replay_buffer.encode_recent_observation()
-        action[idx_lst] = self.actor.get_action(obs[idx_lst, :])
-        param = self.update_param(old_param, action)
+        actions = self.select_action()
 
         # take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
         # HINT2: remember the following useful function that you've seen before:
         # obs, reward, done, info = env.step(action)
-        next_obs, reward, error, fimg = emrecon.mlem_tv(self.sysmat, proj, obs, param, ground_truth, self.num_pixels,
-                                                        self.patch_size, self.patch_rew, self.niter)
-        # self.last_obs = new_obs
+        last_obs = self.env.obs
+        next_obs, params, reward, error, img_mat = self.env.step(actions)
 
         # store the result of taking this action into the replay buffer
         # HINT1: see your replay buffer's `store_effect` function
         # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
         # self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
-        self.replay_buffer.store_sample(obs, action, param, reward, next_obs, done)
+        self.replay_buffer.store_sample(last_obs, actions, params, reward, next_obs, done)
 
         # if taking this step resulted in done, reset the env (and the latest observation)
         # if done:

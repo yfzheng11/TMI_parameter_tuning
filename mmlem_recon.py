@@ -5,17 +5,21 @@ class ReconEnv(object):
     def __init__(self, sysmat, proj_train, proj_test, true_img_train, true_img_test, env_params):
         self.sysmat = sysmat
         self.sensitivity = np.array(np.sum(sysmat, axis=0)).reshape(-1)
+        # some constants
         self.NIMG = proj_train.shape[-1]
         self.NITER = env_params['num_iters']  # 5
         self.NPixel = env_params['NPixel']  # 128
         self.patch_obs = env_params['patch_obs']  # 9
         self.patch_rew = env_params['patch_rew']  # 9
+        self.ac_dim = env_params['ac_dim']
+        self.action_repr = env_params['action_repr']
         # proj data
         self.proj_train = proj_train
         self.proj_test = proj_test
         # ground truth img
         self.true_img_train = true_img_train
         self.true_img_test = true_img_test
+        # variables
         self.obs = np.ones((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
         self.session = 'train'
@@ -31,13 +35,40 @@ class ReconEnv(object):
                 img_new = self.mlem_tv_recon(img_old, self.proj_test[:, i], self.param[:, i])
             self.obs[:, :, i] = self.generate_patch_obs(img_new)
 
-    def step_env(self, img_old, projdata, true_img, param):
-        img_mat = self.mlem_tv_recon(img_old, projdata, param)
-        next_state = self.generate_patch_obs(img_mat)
+    def step(self, actions):
+        # get new recon variable
+        self.update_recon_param(actions)
 
+        # perform EM recon
+        next_state = np.empty((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
+        rewards = np.empty((int(self.NPixel ** 2), self.NIMG), dtype=np.float32)
+        img_mat = np.empty((int(self.NPixel ** 2), self.NIMG), dtype=np.float32)
+        error = []
+        for i in range(self.NIMG):
+            img_old = self.obs[:, int(self.patch_obs ** 2) // 2, i]
+            if self.session == 'train':
+                img_new = self.mlem_tv_recon(img_old, self.proj_train[:, i], self.param[:, i])
+                img_true = self.true_img_train[:, i]
+            else:
+                img_new = self.mlem_tv_recon(img_old, self.proj_test[:, i], self.param[:, i])
+                img_true = self.true_img_test[:, i]
+            # self.obs[:, :, i] = self.generate_patch_obs(img_new)
+            img_mat[:, i] = img_new
+            next_state[:, :, i] = self.generate_patch_obs(img_new)
+            rew, err = self.get_reward(img_old, img_new, img_true)
+            rewards[:, i] = rew
+            error.append(err)
+        self.obs = next_state
+        return next_state, self.param, rewards, np.mean(error), img_mat
+
+    def update_recon_param(self, actions):
+        for i in range(self.ac_dim):
+            self.param[actions == i] *= self.action_repr[f'{i}']
+
+    def get_reward(self, img_old, img_new, img_true):
         # obtain reward
-        dist1img = (img_old - true_img).reshape((self.NPixel, self.NPixel), order='C')
-        dist2img = (img_mat - true_img).reshape((self.NPixel, self.NPixel), order='C')
+        dist1img = (img_old - img_true).reshape((self.NPixel, self.NPixel), order='C')
+        dist2img = (img_new - img_true).reshape((self.NPixel, self.NPixel), order='C')
         dist1imgLarge = np.zeros((self.NPixel + self.patch_rew - 1, self.NPixel + self.patch_rew - 1))
         margin = self.patch_rew // 2
         dist1imgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = np.absolute(dist1img)
@@ -46,19 +77,18 @@ class ReconEnv(object):
         dist2imgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = np.absolute(dist2img)
 
         GTimgLarge = np.zeros((self.NPixel + self.patch_rew - 1, self.NPixel + self.patch_rew - 1))
-        GTimgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = true_img.reshape(
+        GTimgLarge[margin:self.NPixel + margin, margin:self.NPixel + margin] = img_true.reshape(
             (self.NPixel, self.NPixel), order='C')
 
-        rewardimg = np.empty((self.NPixel, self.NPixel), dtype=np.float32)
+        reward_img = np.empty((self.NPixel, self.NPixel), dtype=np.float32)
         for i in range(self.NPixel):
             for j in range(self.NPixel):
-                rewardimg[i, j] = 1 / (
+                reward_img[i, j] = 1 / (
                         np.sum(dist2imgLarge[i:i + self.patch_rew, j:j + self.patch_rew]) + 0.001) - 1 / (
-                                          np.sum(dist1imgLarge[i:i + self.patch_rew, j:j + self.patch_rew]) + 0.001)
-        reward = rewardimg.reshape(-1, order='C')
+                                           np.sum(dist1imgLarge[i:i + self.patch_rew, j:j + self.patch_rew]) + 0.001)
+        reward = reward_img.reshape(-1, order='C')
         error = np.sum(np.absolute(dist2img))
-
-        return next_state, reward, error, img_mat.reshape((self.NPixel, self.NPixel), order='C')
+        return reward, error
 
     def mlem_tv_recon(self, img_old, projdata, param):
         img_mat = img_old

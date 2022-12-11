@@ -38,8 +38,6 @@ class RL_Trainer(object):
         torch.manual_seed(seed)
         ptu.init_gpu(use_gpu=True, gpu_id=0)
 
-        # Observation and action sizes
-
         #############
         ## AGENT
         #############
@@ -135,14 +133,14 @@ class RL_Trainer(object):
         all_logs = []
         for train_step in range(self.params['num_agent_train_steps_per_iter']):
             # step env
-            self.agent.step_env()
+            error, img_mat = self.agent.step_env()
             self.total_envsteps += 1
 
             # sample some data from the data buffer
             # HINT1: use the agent's sample function
             # HINT2: how much data = self.params['train_batch_size']
-            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(
-                self.params['train_batch_size'])
+            ob_batch, ac_batch, param_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(
+                self.params['batch_size'])
 
             # use the sampled data to train an agent
             # HINT: use the agent's train function

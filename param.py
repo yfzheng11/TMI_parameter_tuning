@@ -8,7 +8,7 @@ action_repr = {
 }
 
 params = {
-    'num_iters': 10,
+    'num_iters_for_recon': 10,
     'NPixel': 128,
     'patch_obs': 9,
     'patch_rew': 5,
@@ -18,8 +18,17 @@ params = {
     'scalar_log_freq': -1,
     'learning_starts': 1,
     'learning_freq': 1,
-    'target_update_freq': 1,
+    'target_update_freq': 15,
     'action_repr': action_repr,
+    'recon_param_lb': 1e-5,
+    'recon_param_ub': 10,
+    'num_agent_train_steps_per_iter': 30,
+    'replay_buffer_size': 5000000,
+    'dqn_discount_rate_gamma': 0.99,
+    'dqn_learning_rate': 0.00001,
+    'dqn_double_q': True,
+    'dqn_network_hidden_size': 128,
+    'dqn_grad_norm_clipping': 10
 
 }
 
@@ -27,15 +36,6 @@ params = {
 # NP = 128
 # TRAIN_IMG_NUM = 6
 # TEST_IMG_NUM = 6
-# MAXITER_RECON = 30
-#
 # PATCH_NUM = NPixel * NPixel
 # Train_NUM_total = PATCH_NUM * TRAIN_IMG_NUM
 # DISCOUNT_RATE = 0.99
-# REPLAY_MEMORY = 5000000
-# TARGET_UPDATE_FREQUENCY = 15
-# MAX_EPISODES = 300
-# load_session = 0
-# save_session = 1
-#
-# TRAIN_NUM_ITER = 10

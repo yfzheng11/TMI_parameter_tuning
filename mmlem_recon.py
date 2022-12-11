@@ -7,12 +7,14 @@ class ReconEnv(object):
         self.sensitivity = np.array(np.sum(sysmat, axis=0)).reshape(-1)
         # some constants
         self.NIMG = proj_train.shape[-1]
-        self.NITER = env_params['num_iters']  # 5
+        self.NITER = env_params['num_iters_for_recon']  # 5
         self.NPixel = env_params['NPixel']  # 128
         self.patch_obs = env_params['patch_obs']  # 9
         self.patch_rew = env_params['patch_rew']  # 9
         self.ac_dim = env_params['ac_dim']
         self.action_repr = env_params['action_repr']
+        self.recon_param_lb = env_params['recon_param_lb']
+        self.recon_param_ub = env_params['recon_param_lb']
         # proj data
         self.proj_train = proj_train
         self.proj_test = proj_test
@@ -64,6 +66,8 @@ class ReconEnv(object):
     def update_recon_param(self, actions):
         for i in range(self.ac_dim):
             self.param[actions == i] *= self.action_repr[f'{i}']
+        self.param[self.param < self.recon_param_lb] = self.recon_param_lb
+        self.param[self.param > self.recon_param_ub] = self.recon_param_ub
 
     def get_reward(self, img_old, img_new, img_true):
         # obtain reward

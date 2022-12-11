@@ -30,10 +30,9 @@ class DQNAgent(object):
         self.exploration = PiecewiseSchedule([(0, 0.99), (1300, 0.1)], outside_value=0.1)
         self.optimizer_spec = agent_params['optimizer_spec']
 
-        self.critic = DQNCritic(agent_params['ob_dim'], agent_params['ac_dim'])
+        self.critic = DQNCritic(agent_params)
         self.actor = ArgMaxPolicy(self.critic)
 
-        # lander = agent_params['env_name'].startswith('LunarLander')
         self.replay_buffer = ReplayBuffer(
             agent_params['replay_buffer_size'], int(agent_params['ob_dim'] ** 2))
         self.t = 0
@@ -96,11 +95,14 @@ class DQNAgent(object):
         # HINT1: see your replay buffer's `store_effect` function
         # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
         # self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
-        self.replay_buffer.store_sample(last_obs, actions, params, reward, next_obs, done)
+        for i in range(self.env.NIMG):
+            self.replay_buffer.store_sample(last_obs[:, :, i], actions[:, i], params[:, i],
+                                            reward[:, i], next_obs[:, :, i], done[:, i])
 
         # if taking this step resulted in done, reset the env (and the latest observation)
         # if done:
         #     self.last_obs = self.env.reset()
+        return error, img_mat
 
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):

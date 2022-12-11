@@ -459,9 +459,26 @@ class ReplayBuffer(object):
             self.param[self.next_idx:num + self.next_idx] = param
             self.reward[self.next_idx:num + self.next_idx] = reward
             self.done[self.next_idx:num + self.next_idx] = done
-            # update next idx and total samples in the buffer
+            # update next idx
             self.next_idx = (self.next_idx + num) % self.size
-            self.num_in_buffer = min(self.size, self.num_in_buffer + num)
         else:
-            part1 = self.size - self.next_idx + 2
-            part2 = num - self.size + self.next_idx - 1
+            part1 = self.size - self.next_idx
+            # fill in the rest positions in the replay buffer
+            self.obs[self.next_idx:, :] = state[:part1, :]
+            self.next_obs[self.next_idx:, :] = next_state[:part1, :]
+            self.action[self.next_idx:] = action[:part1]
+            self.param[self.next_idx:] = param[:part1]
+            self.reward[self.next_idx:] = reward[:part1]
+            self.done[self.next_idx:] = done[:part1]
+            # update next idx
+            self.next_idx = (self.next_idx + num) % self.size
+            # overwriting old frames
+            self.obs[:self.next_idx, :] = state[part1:, :]
+            self.next_obs[:self.next_idx, :] = next_state[part1:, :]
+            self.action[:self.next_idx] = action[part1:]
+            self.param[:self.next_idx] = param[part1:]
+            self.reward[:self.next_idx] = reward[part1:]
+            self.done[:self.next_idx] = done[part1:]
+
+        # update total samples in the buffer
+        self.num_in_buffer = min(self.size, self.num_in_buffer + num)

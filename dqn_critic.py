@@ -7,17 +7,17 @@ from infrastructure import pytorch_util as ptu
 
 class DQNCritic(object):
 
-    def __init__(self, ob_dim, ac_dim, gamma=0.99, l_rate=0.00001, h_size=128, double_q=True, grad_norm_clipping=10):
-        self.ob_dim = ob_dim
-        self.ac_dim = ac_dim
-        self.gamma = gamma
-        self.learning_rate = l_rate
+    def __init__(self, critic_params):
+        self.ob_dim = critic_params['patch_obs']
+        self.ac_dim = critic_params['ac_dim']
+        self.gamma = critic_params['dqn_discount_rate_gamma']
+        self.learning_rate = critic_params['dqn_learning_rate']
 
-        self.double_q = double_q
-        self.grad_norm_clipping = grad_norm_clipping
+        self.double_q = critic_params['dqn_double_q']
+        self.grad_norm_clipping = critic_params['dqn_grad_norm_clipping']
 
-        self.q_net = self.build_network(h_size=h_size)
-        self.q_net_target = self.build_network(h_size=h_size)
+        self.q_net = self.build_network(h_size=critic_params['dqn_network_hidden_size'])
+        self.q_net_target = self.build_network(h_size=critic_params['dqn_network_hidden_size'])
 
         self.optimizer = optim.Adam(self.q_net.parameters(),
                                     self.learning_rate)

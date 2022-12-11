@@ -3,42 +3,30 @@ import random
 from infrastructure.dqn_utils import ReplayBuffer, PiecewiseSchedule
 from argmax_policy import ArgMaxPolicy
 from dqn_critic import DQNCritic
-import mmlem_recon as emrecon
 
 
 class DQNAgent(object):
     def __init__(self, env, agent_params):
-        # self.agent_params = agent_params
         self.env = env
         self.batch_size = agent_params['batch_size']
 
         self.num_actions = agent_params['ac_dim']
         self.num_patch_obs = int(agent_params['NPixel'] ** 2)
 
-        #####
-        self.num_pixels = agent_params['num_pixel']
-        self.patch_size = agent_params['patch_size']
-        self.patch_rew = agent_params['patch_rew']
-        self.niter = agent_params['niter']
-
-        ###
         self.learning_starts = agent_params['learning_starts']
         self.learning_freq = agent_params['learning_freq']
         self.target_update_freq = agent_params['target_update_freq']
 
-        # self.replay_buffer_idx = None
         self.exploration = PiecewiseSchedule([(0, 0.99), (1300, 0.1)], outside_value=0.1)
-        self.optimizer_spec = agent_params['optimizer_spec']
+        # self.optimizer_spec = agent_params['optimizer_spec']
 
         self.critic = DQNCritic(agent_params)
         self.actor = ArgMaxPolicy(self.critic)
 
         self.replay_buffer = ReplayBuffer(
-            agent_params['replay_buffer_size'], int(agent_params['ob_dim'] ** 2))
+            agent_params['replay_buffer_size'], int(agent_params['patch_obs'] ** 2))
         self.t = 0
         self.num_param_updates = 0
-
-        self.action_repr = agent_params['action_repr']
 
     def add_to_replay_buffer(self, state, action, param, reward, next_state, done):
         self.replay_buffer.store_sample(state, action, param, reward, next_state, done)

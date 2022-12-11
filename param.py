@@ -28,8 +28,10 @@ params = {
     'dqn_learning_rate': 0.00001,
     'dqn_double_q': True,
     'dqn_network_hidden_size': 128,
-    'dqn_grad_norm_clipping': 10
-
+    'dqn_grad_norm_clipping': 10,
+    'logdir': None,
+    'random_seed': 5,
+    'save_params': False
 }
 
 # NPROJ = 60

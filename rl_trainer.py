@@ -1,20 +1,11 @@
 from collections import OrderedDict
-import pickle
-import os
 import sys
 import time
 from infrastructure.logger import Logger
 from dqn_agent import DQNAgent
-
-from cs285.infrastructure.atari_wrappers import ReturnWrapper
-
-import gym
-from gym import wrappers
 import numpy as np
 import torch
 from cs285.infrastructure import pytorch_util as ptu
-
-from cs285.infrastructure.utils import Path
 from cs285.infrastructure import utils
 
 # how many rollouts to save as videos to tensorboard
@@ -33,7 +24,7 @@ class RL_Trainer(object):
         self.logger = Logger(self.params['logdir'])
 
         # Set random seeds
-        seed = self.params['seed']
+        seed = self.params['random_seed']
         np.random.seed(seed)
         torch.manual_seed(seed)
         ptu.init_gpu(use_gpu=True, gpu_id=0)
@@ -129,11 +120,12 @@ class RL_Trainer(object):
 
     def train_agent(self):
         # get this from hw1 or hw2
-        print('\nTraining agent using sampled data from replay buffer...')
+        # print('\nTraining agent using sampled data from replay buffer...')
         all_logs = []
         for train_step in range(self.params['num_agent_train_steps_per_iter']):
             # step env
             error, img_mat = self.agent.step_env()
+            print('recon error = ', error)
             self.total_envsteps += 1
 
             # sample some data from the data buffer

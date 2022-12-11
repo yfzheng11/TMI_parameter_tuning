@@ -1,28 +1,18 @@
+import os.path
+import time
 import numpy as np
 import h5py
 import tables
 import param
-import scipy.io
-from numpy import *
-import scipy.linalg
+import scipy
 import matplotlib.pyplot as plt
-import os
-import pylab as pl
+# import pylab as pl
 from mmlem_recon import ReconEnv
 from dqn_agent import DQNAgent
 from rl_trainer import RL_Trainer
 
 
 def main():
-    # # load input data
-    # f = h5py.File('data/TrainData.mat', 'r')
-    # TrainData = f.get('/TrainData')
-    # TrainData = np.array(TrainData)
-    #
-    # f = h5py.File('data/TestData.mat', 'r')
-    # TestData = f.get('/TestData')
-    # TestData = np.array(TestData)
-
     # load ground truth data
     f = h5py.File('data/TrueImgTrain.mat', 'r')
     TrueImgTrain = f.get('/TrueImgTrain')
@@ -46,16 +36,24 @@ def main():
     proj_test = f.root.projection.read()
     f.close()
 
+    fname = 'test'
+    logdir = f'{fname}_EMrecon_DQN_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = os.path.join('data', 'logdir', logdir)
+    if not (os.path.exists(logdir)):
+        os.makedirs(logdir)
+    print("\n\n\nLOGGING TO: ", logdir, "\n\n\n")
+    param.params['logdir'] = logdir
+
     env = ReconEnv(sysmat, proj_train, proj_test, TrueImgTrain, TrueImgTest, param.params)
     agent = DQNAgent(env, param.params)
     trainer = RL_Trainer(agent, param.params)
     trainer.run_training_loop(param.params['num_epoches'])
 
-    # test = env.obs
-    # img = test[:, 40, 1]
-    # plt.imshow(np.rot90(img.reshape((128, 128)), 3))
-    # plt.colorbar()
-    # plt.show()
+    test = env.obs
+    img = test[:, 40, 1]
+    plt.imshow(np.rot90(img.reshape((128, 128)), 3))
+    plt.colorbar()
+    plt.show()
 
 
 if __name__ == "__main__":

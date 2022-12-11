@@ -8,7 +8,7 @@ action_repr = {
 }
 
 params = {
-    'num_epoches': 2,
+    'num_epoches': 1,
     'num_agent_train_steps_per_iter': 5,
     'num_iters_for_recon': 10,
     'NPixel': 128,

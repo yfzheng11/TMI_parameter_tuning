@@ -122,9 +122,13 @@ class RL_Trainer(object):
         # get this from hw1 or hw2
         # print('\nTraining agent using sampled data from replay buffer...')
         all_logs = []
+        done = np.zeros((int(self.params['NPixel'] ** 2), self.agent.env.NIMG))
         for train_step in range(self.params['num_agent_train_steps_per_iter']):
             # step env
-            error, img_mat = self.agent.step_env()
+            if train_step >= self.params['num_agent_train_steps_per_iter'] - 1:
+                done = np.ones((int(self.params['NPixel'] ** 2), self.agent.env.NIMG))
+
+            error, img_mat = self.agent.step_env(done)
             print('recon error = ', error)
             self.total_envsteps += 1
 

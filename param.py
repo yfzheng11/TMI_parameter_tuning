@@ -8,13 +8,14 @@ action_repr = {
 }
 
 params = {
+    'num_epoches': 2,
+    'num_agent_train_steps_per_iter': 5,
     'num_iters_for_recon': 10,
     'NPixel': 128,
     'patch_obs': 9,
     'patch_rew': 5,
     'batch_size': 128,
     'ac_dim': 5,
-    'num_epoches': 300,
     'scalar_log_freq': -1,
     'learning_starts': 1,
     'learning_freq': 1,
@@ -22,7 +23,6 @@ params = {
     'action_repr': action_repr,
     'recon_param_lb': 1e-5,
     'recon_param_ub': 10,
-    'num_agent_train_steps_per_iter': 30,
     'replay_buffer_size': 5000000,
     'dqn_discount_rate_gamma': 0.99,
     'dqn_learning_rate': 0.00001,

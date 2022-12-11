@@ -81,7 +81,7 @@ class RL_Trainer(object):
             all_logs = self.train_agent()
 
             # log/save
-            if self.logvideo or self.logmetrics:
+            if self.logmetrics:
                 # perform logging
                 print('\nBeginning logging procedure...')
                 self.perform_dqn_logging(all_logs)

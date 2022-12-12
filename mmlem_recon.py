@@ -26,6 +26,7 @@ class ReconEnv(object):
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
         self.session = 'train'
         self.episode_reward = []
+        self.img_recon = None
 
     def reset(self):
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
@@ -63,6 +64,7 @@ class ReconEnv(object):
             error.append(err)
         self.obs = next_state
         self.episode_reward.append(np.mean(np.sum(rewards, axis=0)))
+        self.img_recon = img_mat
         return next_state, self.param, rewards, np.mean(error), img_mat
 
     def update_recon_param(self, actions):
@@ -99,18 +101,30 @@ class ReconEnv(object):
     def get_episode_rewards(self):
         return self.episode_reward
 
+    def get_recon_imgs(self):
+        return self.img_recon
+
     def mlem_tv_recon(self, img_old, projdata, param):
-        img_mat = img_old
+        img_new = img_old
         # for loop over iterations
         for i in range(self.NITER):
             # if i % 10 == 0:
             #     print('iteration: ', i + 1, ' of ', self.NITER)
+            img_old = img_new
             # EM step
-            img_mat = np.multiply(
-                np.divide(img_mat, self.sensitivity),
-                self.sysmat.transpose() * (projdata / (self.sysmat * img_mat)))
-            img_mat[np.isnan(img_mat)] = 0
-        return img_mat
+            img_new = np.multiply(
+                np.divide(img_new, self.sensitivity),
+                self.sysmat.transpose() * (projdata / (self.sysmat * img_new)))
+            img_new[np.isnan(img_new)] = 0
+
+            # TV step
+            tv = ReconEnv.tv_grad(img_new, (self.NPixel, self.NPixel))
+            # lamb = lamb_half - param.TV_WEIGHT * lamb / sensitivity * tv
+            img_new = img_new - param * img_old / self.sensitivity * tv
+            # lamb = lamb_half - param.TV_WEIGHT * lamb / sensitivity * utils.kl_grad(lamb_half, img_compton)
+            img_new[np.isnan(img_new)] = 0
+            img_new[img_new < 0] = 0
+        return img_new
 
     def generate_patch_obs(self, img):
         # obtain next state
@@ -126,6 +140,35 @@ class ReconEnv(object):
                 next_state[count, :] = temp.reshape(-1, order='C')
                 count += 1
         return next_state
+
+    @staticmethod
+    def tv_grad(img, img_shape):
+        img = img.reshape(img_shape, order='C')
+        img_tv = np.zeros(img_shape)
+        if len(img_shape) == 3:
+            tv_h_1 = np.sign(img[:-1, :, :] - img[1:, :, :])
+            tv_h_2 = np.sign(img[1:, :, :] - img[:-1, :, :])
+            tv_w_1 = np.sign(img[:, :-1, :] - img[:, 1:, :])
+            tv_w_2 = np.sign(img[:, 1:, :] - img[:, :-1, :])
+            tv_d_1 = np.sign(img[:, :, :-1] - img[:, :, 1:])
+            tv_d_2 = np.sign(img[:, :, 1:] - img[:, :, :-1])
+
+            img_tv[:-1, :, :] += tv_h_1
+            img_tv[1:, :, :] += tv_h_2
+            img_tv[:, :-1, :] += tv_w_1
+            img_tv[:, 1:, :] += tv_w_2
+            img_tv[:, :, :-1] += tv_d_1
+            img_tv[:, :, 1:] += tv_d_2
+        elif len(img_shape) == 2:
+            tv_h_1 = np.sign(img[:-1, :] - img[1:, :])
+            tv_h_2 = np.sign(img[1:, :] - img[:-1, :])
+            tv_w_1 = np.sign(img[:, :-1] - img[:, 1:])
+            tv_w_2 = np.sign(img[:, 1:] - img[:, :-1])
+            img_tv[:-1, :] += tv_h_1
+            img_tv[1:, :] += tv_h_2
+            img_tv[:, :-1] += tv_w_1
+            img_tv[:, 1:] += tv_w_2
+        return img_tv.reshape(-1, order='C')
 
 # def mmlem(pMat,
 #           projdata, state, action, para, gamma, GroundTruth, NPixel, INPUT_SIZE, itertotal, tol):

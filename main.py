@@ -36,7 +36,7 @@ def main():
     proj_test = f.root.projection.read()
     f.close()
 
-    fname = 'test'
+    fname = 'MLEM+TV'
     logdir = f'{fname}_EMrecon_DQN_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = os.path.join('data', 'logdir', logdir)
     if not (os.path.exists(logdir)):
@@ -49,9 +49,14 @@ def main():
     trainer = RL_Trainer(agent, param.params)
     trainer.run_training_loop(param.params['num_epoches'])
 
-    test = env.obs
-    img = test[:, 40, 1]
-    plt.imshow(np.rot90(img.reshape((128, 128)), 3))
+    # save final recon images
+    img = env.get_recon_imgs()
+    f = tables.open_file(os.path.join('data', 'recon', f'{fname}_EMrecon_DQN.h5'), 'w')
+    f.create_array('/', 'img', img)
+    f.close()
+    # plot recon image
+    idx = 0
+    plt.imshow(np.rot90(img[:, idx].reshape((128, 128)), 3))
     plt.colorbar()
     plt.show()
 

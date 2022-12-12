@@ -8,9 +8,9 @@ action_repr = {
 }
 
 params = {
-    'num_epoches': 2,
-    'num_agent_train_steps_per_iter': 5,
-    'num_iters_for_recon': 10,
+    'num_epoches': 300,
+    'num_agent_train_steps_per_iter': 50,
+    'num_iters_for_recon': 30,  # 50
     'NPixel': 128,
     'patch_obs': 9,
     'patch_rew': 5,

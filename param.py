@@ -25,7 +25,7 @@ params = {
     'recon_param_ub': 10,
     'replay_buffer_size': 5000000,
     'dqn_discount_rate_gamma': 0.99,
-    'dqn_learning_rate': 0.00001,
+    'dqn_learning_rate': 0.001,
     'dqn_double_q': True,
     'dqn_network_hidden_size': 128,
     'dqn_grad_norm_clipping': 10,

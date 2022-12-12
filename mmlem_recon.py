@@ -14,7 +14,7 @@ class ReconEnv(object):
         self.ac_dim = env_params['ac_dim']
         self.action_repr = env_params['action_repr']
         self.recon_param_lb = env_params['recon_param_lb']
-        self.recon_param_ub = env_params['recon_param_lb']
+        self.recon_param_ub = env_params['recon_param_ub']
         # proj data
         self.proj_train = proj_train
         self.proj_test = proj_test
@@ -129,6 +129,9 @@ class ReconEnv(object):
             # lamb = lamb_half - param.TV_WEIGHT * lamb / sensitivity * utils.kl_grad(lamb_half, img_compton)
             img_new[np.isnan(img_new)] = 0
             img_new[img_new < 0] = 0
+            # early stopping
+            if np.sum(np.absolute(img_new - img_old)) / np.sum(np.absolute(img_old)) <= 1e-3:
+                break
         return img_new
 
     def generate_patch_obs(self, img):

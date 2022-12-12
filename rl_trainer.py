@@ -90,7 +90,7 @@ class RL_Trainer(object):
                 # perform logging
                 print('\nBeginning logging procedure...')
                 self.perform_dqn_logging(all_logs)
-                if self.params['save_params'] and itr == n_iter - 1:
+                if itr > 0 and itr % self.params['save_params_freq'] == 0:
                     self.agent.save('{}/agent_itr_{}'.format(self.params['logdir'], itr))
 
     ####################################

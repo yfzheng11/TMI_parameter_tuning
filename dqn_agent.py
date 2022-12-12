@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import os
 from infrastructure.dqn_utils import ReplayBuffer, PiecewiseSchedule
 from argmax_policy import ArgMaxPolicy
 from dqn_critic import DQNCritic
@@ -90,7 +91,7 @@ class DQNAgent(object):
         # if taking this step resulted in done, reset the env (and the latest observation)
         # if done:
         #     self.last_obs = self.env.reset()
-        return error, img_mat
+        return error, np.mean(reward), img_mat
 
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):
@@ -118,3 +119,9 @@ class DQNAgent(object):
 
         self.t += 1
         return log
+
+    def save(self, path):
+        if not (os.path.exists(path)):
+            os.makedirs(path)
+        self.critic.save_models(path)
+        self.env.save_env(path)

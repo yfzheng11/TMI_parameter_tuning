@@ -49,12 +49,8 @@ def main():
     trainer = RL_Trainer(agent, param.params)
     trainer.run_training_loop(param.params['num_epoches'])
 
-    # save final recon images
-    img = env.get_recon_imgs()
-    f = tables.open_file(os.path.join('data', 'recon', f'{fname}_EMrecon_DQN.h5'), 'w')
-    f.create_array('/', 'img', img)
-    f.close()
     # plot recon image
+    img = env.get_recon_imgs()
     idx = 0
     plt.imshow(np.rot90(img[:, idx].reshape((128, 128)), 3))
     plt.colorbar()

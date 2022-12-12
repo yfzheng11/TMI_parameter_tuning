@@ -34,6 +34,10 @@ class RL_Trainer(object):
         #############
         self.agent = agent
 
+        # bookkeeping
+        self.recon_error = []
+        self.episode_reward = []
+
     def run_training_loop(self, n_iter, collect_policy=None, initial_expertdata=None):
         """
         :param n_iter:  number of (dagger) iterations
@@ -85,8 +89,8 @@ class RL_Trainer(object):
                 # perform logging
                 print('\nBeginning logging procedure...')
                 self.perform_dqn_logging(all_logs)
-                if self.params['save_params']:
-                    self.agent.save('{}/agent_itr_{}.pt'.format(self.params['logdir'], itr))
+                if self.params['save_params'] and itr == n_iter - 1:
+                    self.agent.save('{}/agent_itr_{}'.format(self.params['logdir'], itr))
 
     ####################################
     ####################################
@@ -123,13 +127,16 @@ class RL_Trainer(object):
         # print('\nTraining agent using sampled data from replay buffer...')
         all_logs = []
         done = np.zeros((int(self.params['NPixel'] ** 2), self.agent.env.NIMG))
+        error_lst = []
+        reward_lst = []
         for train_step in range(self.params['num_agent_train_steps_per_iter']):
             # step env
             if train_step >= self.params['num_agent_train_steps_per_iter'] - 1:
                 done = np.ones((int(self.params['NPixel'] ** 2), self.agent.env.NIMG))
-
-            error, img_mat = self.agent.step_env(done)
-            print('recon error = ', error)
+            error, rew, img_mat = self.agent.step_env(done)
+            error_lst.append(error)
+            reward_lst.append(rew)
+            # print('recon error = ', error)
             self.total_envsteps += 1
 
             # sample some data from the data buffer
@@ -143,6 +150,8 @@ class RL_Trainer(object):
             # HINT: keep the agent's training log for debugging
             train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             all_logs.append(train_log)
+        self.recon_error.append(np.mean(error_lst))
+        self.episode_reward.append(np.mean(reward_lst))
         return all_logs
 
     ####################################
@@ -150,9 +159,13 @@ class RL_Trainer(object):
     def perform_dqn_logging(self, all_logs):
         last_log = all_logs[-1]
 
-        episode_rewards = self.agent.env.get_episode_rewards()
-        if len(episode_rewards) > 0:
-            mean_episode_reward = np.mean(episode_rewards[-self.params['num_agent_train_steps_per_iter']:])
+        # episode_rewards = self.agent.env.get_episode_rewards()
+        if len(self.episode_reward) > 3:
+            mean_episode_reward = np.mean(self.episode_reward[-3:])
+            mean_episode_reconerror = np.mean(self.recon_error[-3:])
+        else:
+            mean_episode_reward = self.episode_reward[-1]
+            mean_episode_reconerror = self.recon_error[-1]
         # if len(episode_rewards) > 100:
         #     self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
 
@@ -163,6 +176,8 @@ class RL_Trainer(object):
         if mean_episode_reward > -5000:
             logs["Train_AverageReturn"] = np.mean(mean_episode_reward)
         print("mean reward %f" % mean_episode_reward)
+        logs["Train_ReconError"] = mean_episode_reconerror
+        print(f'mean recon error {mean_episode_reconerror}')
         # if self.best_mean_episode_reward > -5000:
         #     logs["Train_BestReturn"] = np.mean(self.best_mean_episode_reward)
         # print("best mean reward %f" % self.best_mean_episode_reward)

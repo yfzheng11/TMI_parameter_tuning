@@ -9,8 +9,8 @@ action_repr = {
 
 params = {
     'num_epoches': 300,
-    'num_agent_train_steps_per_iter': 50,
-    'num_iters_for_recon': 30,  # 50
+    'num_agent_train_steps_per_iter': 20,
+    'num_iters_for_recon': 50,  # 50
     'NPixel': 128,
     'patch_obs': 9,
     'patch_rew': 5,
@@ -31,5 +31,5 @@ params = {
     'dqn_grad_norm_clipping': 10,
     'logdir': None,
     'random_seed': 5,
-    'save_params': False
+    'save_params': True
 }

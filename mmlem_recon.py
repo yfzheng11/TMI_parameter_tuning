@@ -25,11 +25,11 @@ class ReconEnv(object):
         self.obs = np.ones((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
         self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
         self.session = 'train'
-        self.episode_reward = []
+        # self.episode_reward = []
         self.img_recon = None
 
     def reset(self):
-        self.param = 0.005 * np.ones((int(self.NPixel ** 2), self.NIMG))
+        self.param = 0.1 * np.ones((int(self.NPixel ** 2), self.NIMG))
         self.obs = np.ones((int(self.NPixel ** 2), int(self.patch_obs ** 2), self.NIMG), dtype=np.float32)
         for i in range(self.NIMG):
             img_old = self.obs[:, int(self.patch_obs ** 2) // 2, i]
@@ -38,6 +38,10 @@ class ReconEnv(object):
             else:
                 img_new = self.mlem_tv_recon(img_old, self.proj_test[:, i], self.param[:, i])
             self.obs[:, :, i] = self.generate_patch_obs(img_new)
+
+    def save_env(self, path):
+        np.save(f'{path}/recon_img.npy', self.img_recon)
+        np.save(f'{path}/recon_param.npy', self.param)
 
     def step(self, actions):
         # get new recon variable
@@ -64,7 +68,7 @@ class ReconEnv(object):
             error.append(err)
         self.obs = next_state
         # self.episode_reward.append(np.mean(np.sum(rewards, axis=0)))
-        self.episode_reward.append(np.mean(rewards))
+        # self.episode_reward.append(np.mean(rewards))
         self.img_recon = img_mat
         return next_state, self.param, rewards, np.mean(error), img_mat
 
@@ -99,8 +103,8 @@ class ReconEnv(object):
         error = np.sum(np.absolute(dist2img))
         return reward, error
 
-    def get_episode_rewards(self):
-        return self.episode_reward
+    # def get_episode_rewards(self):
+    #     return self.episode_reward
 
     def get_recon_imgs(self):
         return self.img_recon

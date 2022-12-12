@@ -3,6 +3,7 @@ import torch.optim as optim
 from torch.nn import utils
 from torch import nn
 from infrastructure import pytorch_util as ptu
+import copy
 
 
 class DQNCritic(object):
@@ -121,3 +122,8 @@ class DQNCritic(object):
         obs = ptu.from_numpy(obs)
         qa_values = self.q_net(obs)
         return ptu.to_numpy(qa_values)
+
+    def save_models(self, path):
+        print("saving model weights")
+        torch.save(self.q_net.state_dict(), f'{path}/qnet_wts.mdl')
+        torch.save(self.q_net_target.state_dict(), f'{path}/qtarget_wts.mdl')

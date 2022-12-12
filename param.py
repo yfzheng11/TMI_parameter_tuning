@@ -33,11 +33,3 @@ params = {
     'random_seed': 5,
     'save_params': False
 }
-
-# NPROJ = 60
-# NP = 128
-# TRAIN_IMG_NUM = 6
-# TEST_IMG_NUM = 6
-# PATCH_NUM = NPixel * NPixel
-# Train_NUM_total = PATCH_NUM * TRAIN_IMG_NUM
-# DISCOUNT_RATE = 0.99

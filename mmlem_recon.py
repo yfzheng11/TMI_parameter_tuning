@@ -63,7 +63,8 @@ class ReconEnv(object):
             rewards[:, i] = rew
             error.append(err)
         self.obs = next_state
-        self.episode_reward.append(np.mean(np.sum(rewards, axis=0)))
+        # self.episode_reward.append(np.mean(np.sum(rewards, axis=0)))
+        self.episode_reward.append(np.mean(rewards))
         self.img_recon = img_mat
         return next_state, self.param, rewards, np.mean(error), img_mat
 

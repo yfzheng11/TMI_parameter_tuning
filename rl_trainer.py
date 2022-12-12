@@ -83,6 +83,7 @@ class RL_Trainer(object):
             if itr % print_period == 0:
                 print("\nTraining agent...")
             all_logs = self.train_agent()
+            self.agent.critic.learning_rate_scheduler.step()
 
             # log/save
             if self.logmetrics:

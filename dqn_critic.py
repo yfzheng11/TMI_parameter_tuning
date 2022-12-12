@@ -22,10 +22,8 @@ class DQNCritic(object):
 
         self.optimizer = optim.Adam(self.q_net.parameters(),
                                     self.learning_rate)
-        # self.learning_rate_scheduler = optim.lr_scheduler.LambdaLR(
-        #     self.optimizer,
-        #     self.optimizer_spec.learning_rate_schedule,
-        # )
+        self.learning_rate_scheduler = optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[100, 200],
+                                                                      gamma=0.5)
         self.loss = nn.SmoothL1Loss()  # AKA Huber loss
         self.q_net.to(ptu.device)
         self.q_net_target.to(ptu.device)

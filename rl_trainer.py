@@ -92,6 +92,7 @@ class RL_Trainer(object):
                 self.perform_dqn_logging(all_logs)
                 if itr > 0 and itr % self.params['save_params_freq'] == 0:
                     self.agent.save('{}/agent_itr_{}'.format(self.params['logdir'], itr))
+
         # save results when training finishes
         self.agent.save('{}/agent_itr_{}'.format(self.params['logdir'], itr))
 

@@ -132,4 +132,9 @@ class DQNCritic(object):
         torch.save(self.q_net_target.state_dict(), f'{path}/qtarget_wts.mdl')
 
     def get_V_for_sqn(self, qa_value):
+        """
+        get the Value function
+        :param qa_value: tensor
+        :return: tensor
+        """
         return self.alpha * torch.log((1 / self.alpha * qa_value).exp().sum(dim=-1, keepdim=True))

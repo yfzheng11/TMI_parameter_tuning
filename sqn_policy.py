@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from infrastructure import pytorch_util as ptu
 
 
 class SQNPolicy(object):
@@ -9,10 +10,11 @@ class SQNPolicy(object):
 
     def get_action(self, obs):
         with torch.no_grad():
-            qa_value = self.critic.qa_values(obs)
+            obs = ptu.from_numpy(obs)
+            qa_value = self.critic.q_net(obs)
             v = self.critic.get_V_for_sqn(qa_value)
             pi_maxent = torch.exp((qa_value - v) / self.critic.alpha)
             pi_maxent = pi_maxent / pi_maxent.sum(dim=-1, keepdim=True)
-            dist = torch.distributions.Categorical(pi_maxent)
-            action = dist.sample().item()
-        return action
+            distribution = torch.distributions.Categorical(pi_maxent)
+            action = distribution.sample()
+        return ptu.to_numpy(action)

@@ -3,6 +3,7 @@ import random
 import os
 from infrastructure.dqn_utils import ReplayBuffer, PiecewiseSchedule
 from argmax_policy import ArgMaxPolicy
+from sqn_policy import SQNPolicy
 from dqn_critic import DQNCritic
 
 
@@ -22,7 +23,11 @@ class DQNAgent(object):
         # self.optimizer_spec = agent_params['optimizer_spec']
 
         self.critic = DQNCritic(agent_params)
-        self.actor = ArgMaxPolicy(self.critic)
+        self.use_sqn = agent_params['use_sqn']
+        if self.use_sqn:
+            self.actor = SQNPolicy(self.critic)
+        else:
+            self.actor = ArgMaxPolicy(self.critic)
 
         self.replay_buffer = ReplayBuffer(
             agent_params['replay_buffer_size'], int(agent_params['patch_obs'] ** 2))
@@ -32,7 +37,7 @@ class DQNAgent(object):
     def add_to_replay_buffer(self, state, action, param, reward, next_state, done):
         self.replay_buffer.store_sample(state, action, param, reward, next_state, done)
 
-    def select_action(self):
+    def select_action_argmax_greedy(self):
         # use epsilon greedy exploration when selecting action
         eps = self.exploration.value(self.t)
         action = np.empty([self.num_patch_obs, self.env.NIMG], dtype=np.int32)
@@ -57,6 +62,13 @@ class DQNAgent(object):
             action[idx_lst, j] = self.actor.get_action(self.env.obs[idx_lst, :, j])
         return action
 
+    def select_action_policy(self):
+        action = np.empty([self.num_patch_obs, self.env.NIMG], dtype=np.int32)
+
+        for j in range(self.env.NIMG):
+            action[:, j] = self.actor.get_action(self.env.obs[:, :, j])
+        return action
+
     def step_env(self, done):
         """
             Step the env and store the transition
@@ -70,8 +82,11 @@ class DQNAgent(object):
         # in dqn_utils.py
         # self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
-        # use epsilon greedy exploration when selecting action
-        actions = self.select_action()
+        if self.use_sqn:
+            actions = self.select_action_policy()
+        else:
+            # use epsilon greedy exploration when selecting action
+            actions = self.select_action_argmax_greedy()
 
         # take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation

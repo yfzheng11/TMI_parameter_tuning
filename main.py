@@ -37,7 +37,7 @@ def main():
     f.close()
 
     fname = 'MLEM+TV'
-    logdir = f'{fname}_EMrecon_DQN_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = f'{fname}_EMrecon_SQN_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = os.path.join('data', 'logdir', logdir)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)

@@ -13,8 +13,10 @@ class DQNCritic(object):
         self.ac_dim = critic_params['ac_dim']
         self.gamma = critic_params['dqn_discount_rate_gamma']
         self.learning_rate = critic_params['dqn_learning_rate']
+        self.alpha = critic_params['sqn_alpha']
 
         self.double_q = critic_params['dqn_double_q']
+        self.use_sqn = critic_params['use_sqn']
         self.grad_norm_clipping = critic_params['dqn_grad_norm_clipping']
 
         self.q_net = self.build_network(h_size=critic_params['dqn_network_hidden_size'])
@@ -74,7 +76,10 @@ class DQNCritic(object):
         # compute the Q-values from the target network
         qa_tp1_values = self.q_net_target(next_ob_no)
 
-        if self.double_q:
+        if self.use_sqn:
+            next_v_values = self.get_V_for_sqn(qa_tp1_values)
+            q_tp1 = next_v_values.squeeze(-1)
+        elif self.double_q:
             # You must fill this part for Q2 of the Q-learning portion of the homework.
             # In double Q-learning, the best action is selected using the Q-network that
             # is being updated, but the Q-value for this action is obtained from the
@@ -125,3 +130,6 @@ class DQNCritic(object):
         print("saving model weights")
         torch.save(self.q_net.state_dict(), f'{path}/qnet_wts.mdl')
         torch.save(self.q_net_target.state_dict(), f'{path}/qtarget_wts.mdl')
+
+    def get_V_for_sqn(self, qa_value):
+        return self.alpha * torch.log((1 / self.alpha * qa_value).exp().sum(dim=-1, keepdim=True))

@@ -31,5 +31,7 @@ params = {
     'dqn_grad_norm_clipping': 10,
     'logdir': None,
     'random_seed': 5,
-    'save_params_freq': 50
+    'save_params_freq': 50,
+    'use_sqn': True,
+    'sqn_alpha': 4
 }

@@ -33,5 +33,5 @@ params = {
     'random_seed': 5,
     'save_params_freq': 50,
     'use_sqn': True,
-    'sqn_alpha': 4
+    'sqn_alpha': 0.1
 }

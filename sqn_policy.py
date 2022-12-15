@@ -15,6 +15,8 @@ class SQNPolicy(object):
             v = self.critic.get_V_for_sqn(qa_value)
             pi_maxent = torch.exp((qa_value - v) / self.critic.alpha)
             pi_maxent = pi_maxent / pi_maxent.sum(dim=-1, keepdim=True)
-            distribution = torch.distributions.Categorical(pi_maxent)
+            pi_maxent[pi_maxent < 0.01] = 0
+            pi_maxent = pi_maxent / pi_maxent.sum(dim=-1, keepdim=True)
+            distribution = torch.distributions.Categorical(pi_maxent, validate_args=False)
             action = distribution.sample()
         return ptu.to_numpy(action)

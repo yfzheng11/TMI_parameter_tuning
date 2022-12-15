@@ -24,10 +24,11 @@ class DQNAgent(object):
 
         self.critic = DQNCritic(agent_params)
         self.use_sqn = agent_params['use_sqn']
-        if self.use_sqn:
-            self.actor = SQNPolicy(self.critic)
-        else:
-            self.actor = ArgMaxPolicy(self.critic)
+        self.actor = ArgMaxPolicy(self.critic)
+        # if self.use_sqn:
+        #     self.actor = SQNPolicy(self.critic)
+        # else:
+        #     self.actor = ArgMaxPolicy(self.critic)
 
         self.replay_buffer = ReplayBuffer(
             agent_params['replay_buffer_size'], int(agent_params['patch_obs'] ** 2))
@@ -82,11 +83,12 @@ class DQNAgent(object):
         # in dqn_utils.py
         # self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
-        if self.use_sqn:
-            actions = self.select_action_policy()
-        else:
-            # use epsilon greedy exploration when selecting action
-            actions = self.select_action_argmax_greedy()
+        # if self.use_sqn:
+        #     actions = self.select_action_policy()
+        # else:
+        #     # use epsilon greedy exploration when selecting action
+        #     actions = self.select_action_argmax_greedy()
+        actions = self.select_action_argmax_greedy()
 
         # take a step in the environment using the action from the policy
         # HINT1: remember that self.last_obs must always point to the newest/latest observation
